@@ -1,12 +1,12 @@
 <?php
-
 /**
  * @package     Joomla.Site
  * @subpackage  com_api
  *
- * @copyright   Copyright (C) 2005 - 2014 Open Source Matters, Inc. All rights reserved.
+ * @copyright   Copyright (C) 2009-2017 Techjoomla, Techjoomla Pvt. Ltd. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  */
+
 // No direct access.
 defined('_JEXEC') or die();
 
@@ -14,7 +14,7 @@ defined('_JEXEC') or die();
  * User Api.
  * Creates a new user, updates an existing user and gets data of an user
  *
- * @package  Joomla.Site
+ * @package  Joomla.Plugin
  *
  * @since    1.1
  */
@@ -23,7 +23,7 @@ class UsersApiResourceUser extends ApiResource
 	/**
 	 * Function to create and edit user record.
 	 *
-	 * @return object|void User details on success. Raise error on failure.
+	 * @return object|void User details on success. raise error on failure.
 	 */
 	public function post()
 	{
@@ -162,7 +162,10 @@ class UsersApiResourceUser extends ApiResource
 		$input = JFactory::getApplication()->input;
 		$id = $input->get('id', 0, 'int');
 
-		// If we have an id try to fetch the user
+		/*
+		 * If we have an id try to fetch the user
+		 * @TODO write user field mapping logic here
+		 */
 		if ($id)
 		{
 			$user = JUser::getInstance($id);
@@ -324,7 +327,7 @@ class UsersApiResourceUser extends ApiResource
 	 *
 	 * @param   string  $userIdentifier  username
 	 *
-	 * @return  object  $user  the user object created on after user finding.
+	 * @return  object  $user  Juser object if user exist otherwise std class.
 	 */
 	private function retriveUser($xidentifier, $userIdentifier)
 	{
