@@ -1,8 +1,7 @@
 <?php
 /**
- * @package     Joomla.Site
- * @subpackage  com_api
- *
+ * @package     Com.Api
+ * @subpackage  users
  * @copyright   Copyright (C) 2009-2017 Techjoomla, Techjoomla Pvt. Ltd. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  */
@@ -14,7 +13,7 @@ defined('_JEXEC') or die();
  * User Api.
  * Creates a new user, updates an existing user and gets data of an user
  *
- * @package  Joomla.Plugin
+ * @package  Com.Api
  *
  * @since    2.0
  */
@@ -29,22 +28,22 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	public function post()
 	{
-		$app						= JFactory::getApplication();
-		$userIdentifier				= $app->input->get('id', 0, 'String');
+		$app = JFactory::getApplication();
+		$userIdentifier = $app->input->get('id', 0, 'String');
 		$formData = array();
-		$formData['username']		= $app->input->get('username', 0, 'String');
-		$formData['name']			= $app->input->get('name', 0, 'String');
-		$formData['email']			= $app->input->get('email', 0, 'String');
-		$formData['enabled']		= $app->input->get('enabled', 0, 'int');
-		$formData['activation']		= $app->input->get('activation', 0, 'int');
-		$formData['password']		= $app->input->get('password', 0, 'String');
-		$formData['groups']			= $app->input->get('groups', 0, 'Array');
+		$formData['username'] = $app->input->get('username', 0, 'String');
+		$formData['name'] = $app->input->get('name', 0, 'String');
+		$formData['email'] = $app->input->get('email', 0, 'String');
+		$formData['enabled'] = $app->input->get('enabled', 0, 'int');
+		$formData['activation'] = $app->input->get('activation', 0, 'int');
+		$formData['password'] = $app->input->get('password', 0, 'String');
+		$formData['groups'] = $app->input->get('groups', 0, 'Array');
 
-		$params			= JComponentHelper::getParams("com_users");
-		$response		= new stdClass;
+		$params = JComponentHelper::getParams("com_users");
+		$response = new stdClass;
 
-		$xidentifier	= $app->input->server->get('HTTP_IDENTIFIER');
-		$fidentifier	= $app->input->server->get('HTTP_FOURCECREATE');
+		$xidentifier = $app->input->server->get('HTTP_IDENTIFIER');
+		$fidentifier = $app->input->server->get('HTTP_FOURCECREATE');
 
 		if ($formData['username'] == '' || $formData['name'] == '' || $formData['email'] == '')
 		{
@@ -76,7 +75,7 @@ class UsersApiResourceUser extends ApiResource
 			$user = new JUser;
 
 			// Create new user.
-			$response = $this->storeUser($user, $formData);
+			$response = $this->storeUser($user, $formData, 1);
 			$this->plugin->setResponse($response);
 
 			return;
@@ -85,7 +84,7 @@ class UsersApiResourceUser extends ApiResource
 		{
 			// Get a user object
 			$user = $this->retriveUser($xidentifier, $userIdentifier);
-			$passedUserGroups  = array();
+			$passedUserGroups = array();
 
 			// If user is already present then update it according to access.
 			if (!empty($user->id))
@@ -107,7 +106,7 @@ class UsersApiResourceUser extends ApiResource
 						$passedUserGroups['groups'] = array_unique(array_merge($user->groups, $formData['groups']));
 					}
 
-					$response = $this->storeUser($user, $passedUserGroups, 1);
+					$response = $this->storeUser($user, $passedUserGroups);
 					$this->plugin->setResponse($response);
 
 					return;
@@ -123,7 +122,7 @@ class UsersApiResourceUser extends ApiResource
 			{
 				if ($fidentifier)
 				{
-					$user		= new JUser;
+					$user = new JUser;
 
 					if ($formData['password'] == '')
 					{
@@ -139,7 +138,7 @@ class UsersApiResourceUser extends ApiResource
 					}
 
 					// Create new user.
-					$response = $this->storeUser($user, $formData);
+					$response = $this->storeUser($user, $formData, 1);
 					$this->plugin->setResponse($response);
 
 					return;
@@ -197,7 +196,7 @@ class UsersApiResourceUser extends ApiResource
 	}
 
 	/**
-	 * Function to returns userid if a user exists depending on email
+	 * Function to return userid if a user exists depending on email
 	 *
 	 * @param   string  $email  The email to search on.
 	 *
@@ -207,9 +206,8 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	private function getUserId($email)
 	{
-		// Initialise some variables
-		$db		= JFactory::getDbo();
-		$query	= $db->getQuery(true)
+		$db = JFactory::getDbo();
+		$query = $db->getQuery(true)
 			->select($db->quoteName('id'))
 			->from($db->quoteName('#__users'))
 			->where($db->quoteName('email') . ' = ' . $db->quote($email));
@@ -223,13 +221,13 @@ class UsersApiResourceUser extends ApiResource
 	 *
 	 * @param   Object   $user      The user object.
 	 * @param   Array    $formData  Array of user data to be added or updated.
-	 * @param   Boolean  $flag      Flag to differnciate the update of create action.
+	 * @param   Boolean  $isNew     Flag to differentiate the update of create action.
 	 *
 	 * @return  object|void  $response  the response object created on after user saving. void and raise error
 	 *
 	 * @since   2.0
 	 */
-	private function storeUser($user, $formData, $flag = 0)
+	private function storeUser($user, $formData, $isNew = 0)
 	{
 		$response = new stdClass;
 
@@ -249,13 +247,13 @@ class UsersApiResourceUser extends ApiResource
 
 		$response->id = $user->id;
 
-		if ($flag)
+		if ($isNew)
 		{
-			$response->message = JText::_('PLG_API_USERS_ACCOUNT_UPDATED_SUCCESSFULLY_MESSAGE');
+			$response->message = JText::_('PLG_API_USERS_ACCOUNT_CREATED_SUCCESSFULLY_MESSAGE');
 		}
 		else
 		{
-			$response->message = JText::_('PLG_API_USERS_ACCOUNT_CREATED_SUCCESSFULLY_MESSAGE');
+			$response->message = JText::_('PLG_API_USERS_ACCOUNT_UPDATED_SUCCESSFULLY_MESSAGE');
 		}
 
 		return $response;
@@ -271,65 +269,63 @@ class UsersApiResourceUser extends ApiResource
 	public function delete()
 	{
 		$app = JFactory::getApplication();
-		$userIdentifier	= $app->input->get('id', 0, 'STRING');
-		$xidentifier	= $app->input->server->get('HTTP_IDENTIFIER');
+		$userIdentifier = $app->input->get('id', 0, 'STRING');
+		$xidentifier = $app->input->server->get('HTTP_IDENTIFIER');
 
-		$loggedUser  = JFactory::getUser();
+		$loggedUser = JFactory::getUser();
 
 		// Check if I am a Super Admin
 		$iAmSuperAdmin = $loggedUser->authorise('core.admin');
 
 		$userToDelete = $this->retriveUser($xidentifier, $userIdentifier);
 
-		if ($userToDelete->id)
-		{
-			if ($loggedUser->id == $userToDelete->id)
-			{
-				ApiError::raiseError(400, JText::_('COM_USERS_USERS_ERROR_CANNOT_DELETE_SELF'));
-
-				return;
-			}
-
-			// Access checks.
-			$allow = $loggedUser->authorise('core.delete', 'com_users');
-
-			// Don't allow non-super-admin to delete a super admin
-			$allow = (!$iAmSuperAdmin && JAccess::check($userToDelete->id, 'core.admin')) ? false : $allow;
-
-			if ($allow)
-			{
-				if (!$userToDelete->delete())
-				{
-					ApiError::raiseError(400, $userToDelete->getError());
-
-					return;
-				}
-			}
-			else
-			{
-				ApiError::raiseError(403, JText::_('JERROR_CORE_DELETE_NOT_PERMITTED'));
-
-				return;
-			}
-
-			$response = new stdClass;
-			$response->message = JText::_('PLG_API_USERS_USER_DELETE_MESSAGE');
-			$this->plugin->setResponse($response);
-
-			return;
-		}
-		else
+		if (!$userToDelete->id)
 		{
 			ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
 
 			return;
 		}
+
+		if ($loggedUser->id == $userToDelete->id)
+		{
+			ApiError::raiseError(400, JText::_('COM_USERS_USERS_ERROR_CANNOT_DELETE_SELF'));
+
+			return;
+		}
+
+		// Access checks.
+		$allow = $loggedUser->authorise('core.delete', 'com_users');
+
+		// Don't allow non-super-admin to delete a super admin
+		$allow = (!$iAmSuperAdmin && JAccess::check($userToDelete->id, 'core.admin')) ? false : $allow;
+
+		if ($allow)
+		{
+			if (!$userToDelete->delete())
+			{
+				ApiError::raiseError(400, $userToDelete->getError());
+
+				return;
+			}
+		}
+		else
+		{
+			ApiError::raiseError(403, JText::_('JERROR_CORE_DELETE_NOT_PERMITTED'));
+
+			return;
+		}
+
+		$response = new stdClass;
+		$response->message = JText::_('PLG_API_USERS_USER_DELETE_MESSAGE');
+		$this->plugin->setResponse($response);
+
+		return;
 	}
 
 	/**
 	 * Function retriveUser for get user details depending upon the identifier.
 	 *
-	 * @param   string  $xidentifier     Flag to differnciate the column value.
+	 * @param   string  $xidentifier     Flag to differentiate the column value.
 	 *
 	 * @param   string  $userIdentifier  username
 	 *
