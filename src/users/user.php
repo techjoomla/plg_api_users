@@ -16,7 +16,7 @@ defined('_JEXEC') or die();
  *
  * @package  Joomla.Plugin
  *
- * @since    1.1
+ * @since    2.0
  */
 class UsersApiResourceUser extends ApiResource
 {
@@ -24,6 +24,8 @@ class UsersApiResourceUser extends ApiResource
 	 * Function to create and edit user record.
 	 *
 	 * @return object|void User details on success. raise error on failure.
+	 *
+	 * @since   2.0
 	 */
 	public function post()
 	{
@@ -156,6 +158,8 @@ class UsersApiResourceUser extends ApiResource
 	 * Function get for user record.
 	 *
 	 * @return object|void User details on success otherwise raise error
+	 *
+	 * @since   2.0
 	 */
 	public function get()
 	{
@@ -261,6 +265,8 @@ class UsersApiResourceUser extends ApiResource
 	 * Function delete is used to delete the respective user record.
 	 *
 	 * @return void
+	 *
+	 * @since   2.0
 	 */
 	public function delete()
 	{
@@ -328,6 +334,8 @@ class UsersApiResourceUser extends ApiResource
 	 * @param   string  $userIdentifier  username
 	 *
 	 * @return  object  $user  Juser object if user exist otherwise std class.
+	 *
+	 * @since   2.0
 	 */
 	private function retriveUser($xidentifier, $userIdentifier)
 	{
