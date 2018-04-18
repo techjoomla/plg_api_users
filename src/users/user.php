@@ -30,20 +30,12 @@ class UsersApiResourceUser extends ApiResource
 	{
 		$app = JFactory::getApplication();
 		$userIdentifier = $app->input->get('id', 0, 'String');
-		$formData = array();
-		$formData['username'] = $app->input->get('username', 0, 'String');
-		$formData['name'] = $app->input->get('name', 0, 'String');
-		$formData['email'] = $app->input->get('email', 0, 'String');
-		$formData['enabled'] = $app->input->get('enabled', 0, 'int');
-		$formData['activation'] = $app->input->get('activation', 0, 'int');
-		$formData['password'] = $app->input->get('password', 0, 'String');
-		$formData['groups'] = $app->input->get('groups', 0, 'Array');
-
+		$formData = $app->input->getArray();
 		$params = JComponentHelper::getParams("com_users");
 		$response = new stdClass;
 
 		$xidentifier = $app->input->server->get('HTTP_IDENTIFIER');
-		$fidentifier = $app->input->server->get('HTTP_FOURCECREATE');
+		$fidentifier = $app->input->server->get('HTTP_FORCECREATE');
 
 		if ($formData['username'] == '' || $formData['name'] == '' || $formData['email'] == '')
 		{
