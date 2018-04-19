@@ -26,5 +26,6 @@ class plgAPIUsers extends ApiPlugin
 		$this->setResourceAccess('login', 'public','get');
 		$this->setResourceAccess('users', 'public', 'post');
 		$this->setResourceAccess('config', 'public', 'get');
+		$this->setResourceAccess('user', 'public', 'post');
 	}
 }

@@ -30,12 +30,14 @@ require_once JPATH_ROOT . '/administrator/components/com_users/models/users.php'
  * @package     Joomla.Administrator
  * @subpackage  com_api
  *
- * @since       1.0
+ * @since       1.1
  */
 class UsersApiResourceUsers extends ApiResource
 {
 	/**
 	 * Function delete for user record.
+	 *
+	 *@deprecated  2.0 use UsersApiResourceUser delete instead
 	 *
 	 * @return void
 	 */
@@ -101,6 +103,7 @@ class UsersApiResourceUsers extends ApiResource
 	/**
 		* Function for edit user record.
 		*
+		* @deprecated  2.0 use UsersApiResourceUser post instead
 		* @return void
 		*/
 	public function put()
@@ -212,7 +215,6 @@ class UsersApiResourceUsers extends ApiResource
 		$data['activation']    = $app->input->get('activation', 0, 'INT');
 		$data['app']    = $app->input->get('app_name', 'Easysocial App', 'STRING');
 		$data['profile_id']    = $app->input->get('profile_id', 1, 'INT');
-		global $message;
 
 		$eobj = new stdClass();
 
@@ -342,6 +344,8 @@ class UsersApiResourceUsers extends ApiResource
 	/**
 	 * Function get for users record.
 	 *
+	 * @deprecated  2.0 This will be move in the post method of UsersApiResourceUsers  with support for filters
+	 *
 	 * @return void
 	 */
 	public function get()
@@ -378,6 +382,8 @@ class UsersApiResourceUsers extends ApiResource
 	/**
 	 * Function create easysocial profile.
 	 *
+	 * @deprecated  2.0 This will be move in the Easysocial API
+	 * 
 	 * @return user obj
 	 */
 	public function createEsprofile($log_user)
@@ -487,7 +493,13 @@ class UsersApiResourceUsers extends ApiResource
 
 	}
 
-	//create field array as per easysocial
+	/**
+	 * create field array as per easysocial
+	 *
+	 * @deprecated  2.0 This will be move in the Easysocial API
+	 *
+	 * @return object
+	 */
 	public function create_field_arr($fields,$post)
 	{
 		$fld_data = array();
@@ -545,7 +557,13 @@ class UsersApiResourceUsers extends ApiResource
 		return $fld_data;
 	}
 
-	//send registration mail
+	/**
+	 * send registration mail
+	 *
+	 * @deprecated  2.0 This will be move in the Easysocial API
+	 *
+	 * @return object
+	 */
 	public function sendRegisterEmail($base_dt)
 	{
 		$config = JFactory::getConfig();
