@@ -8,6 +8,10 @@
 
 defined('_JEXEC') or die( 'Restricted access' );
 
+require_once JPATH_SITE . '/components/com_api/vendors/php-jwt/src/JWT.php';
+
+use Firebase\JWT\JWT;
+
 jimport('joomla.plugin.plugin');
 jimport('joomla.html.html');
 jimport('joomla.application.component.controller');
@@ -39,7 +43,7 @@ class UsersApiResourceLogin extends ApiResource
 		//init variable
 		$obj = new stdclass;
 		$umodel = new JUser;
-		$user = $umodel->getInstance();       
+		$user = $umodel->getInstance();
 
 		$app = JFactory::getApplication();
 		$username = $app->input->get('username', 0, 'STRING');
@@ -50,7 +54,7 @@ class UsersApiResourceLogin extends ApiResource
 		if($id == null)
 		{
 			$model = FD::model('Users');
-			$id = $model->getUserId('email', $username);            
+			$id = $model->getUserId('email', $username);
 		}
 
 		$kmodel = new ApiModelKey;
@@ -83,7 +87,7 @@ class UsersApiResourceLogin extends ApiResource
 
 				$result = $kmodel->save($data);
 				$key = $result->hash;
-				
+
 				//add new key in easysocial table
 				$easyblog = JPATH_ROOT . '/administrator/components/com_easyblog/easyblog.php';
 				if (JFile::exists($easyblog) && JComponentHelper::isEnabled('com_easysocial', true))
@@ -91,13 +95,34 @@ class UsersApiResourceLogin extends ApiResource
 					$this->updateEauth( $user , $key );
 				}
 		}
-		
+
 		if( !empty($key) )
 		{
 			$obj->auth = $key;
 			$obj->code = '200';
 			//$obj->id = $user->id;
 			$obj->id = $id;
+
+			// Generate claim for jwt
+			$data = [
+				"id" => trim($id),
+				/*"iat" => '',
+				"exp" => '',
+				"aud" => '',
+				"sub" => ''"*/
+			];
+
+			// Using HS256 algo to generate JWT
+			$jwt = JWT::encode($data, trim($key), 'HS256');
+
+			if (isset($jwt) && $jwt != '')
+			{
+				$obj->jwt = $jwt;
+			}
+			else
+			{
+				$obj->jwt = false;
+			}
 		}
 		else
 		{
@@ -105,9 +130,9 @@ class UsersApiResourceLogin extends ApiResource
 			$obj->message = JText::_('PLG_API_USERS_BAD_REQUEST_MESSAGE');
 		}
 		return( $obj );
-	
+
 	}
-	
+
 	/*
 	 * function to update Easyblog auth keys
 	 */
