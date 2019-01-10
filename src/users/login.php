@@ -60,7 +60,7 @@ class UsersApiResourceLogin extends ApiResource
 	/**
 	 * Generate key method
 	 *
-	 * @return  object
+	 * @return  object|boolean
 	 */
 	public function keygen()
 	{
