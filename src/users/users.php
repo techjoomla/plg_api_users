@@ -21,7 +21,6 @@ $language = JFactory::getLanguage();
 $language->load('com_users');
 $language->load('com_users', JPATH_SITE, 'en-GB', true);
 $language->load('com_users', JPATH_ADMINISTRATOR, 'en-GB', true);
-require_once JPATH_SITE . '/libraries/joomla/filesystem/folder.php';
 require_once JPATH_ROOT . '/administrator/components/com_users/models/users.php';
 
 /**
@@ -383,7 +382,7 @@ class UsersApiResourceUsers extends ApiResource
 	 * Function create easysocial profile.
 	 *
 	 * @deprecated  2.0 This will be move in the Easysocial API
-	 * 
+	 *
 	 * @return user obj
 	 */
 	public function createEsprofile($log_user)
@@ -515,7 +514,7 @@ class UsersApiResourceUsers extends ApiResource
 				$avtar_pth = $phto_obj['temp_path'];
 				$avtar_scr = $phto_obj['temp_uri'];
 				$avtar_typ = 'upload';
-				$avatar_file_name = $_FILES['avatar']['name']; 
+				$avatar_file_name = $_FILES['avatar']['name'];
 			}
 
 		foreach($fields as $field)
@@ -523,7 +522,7 @@ class UsersApiResourceUsers extends ApiResource
 			$fobj = new stdClass();
 			$fullname = $app->input->get('name', '', 'STRING');
 			$fld_data['first_name'] = $app->input->get('name', '', 'STRING');
-			
+
 
 			$fobj->first = $fld_data['first_name'];
 			$fobj->middle = '';
