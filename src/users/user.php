@@ -156,6 +156,7 @@ class UsersApiResourceUser extends ApiResource
 	{
 		$input = JFactory::getApplication()->input;
 		$id = $input->get('id', 0, 'int');
+		$xidentifier	= $input->server->get('HTTP_IDENTIFIER', '', 'String');
 
 		/*
 		 * If we have an id try to fetch the user
@@ -163,7 +164,15 @@ class UsersApiResourceUser extends ApiResource
 		 */
 		if ($id)
 		{
-			$user = JUser::getInstance($id);
+			if ($xidentifier)
+			{
+				// Get a user object
+				$user = $this->retriveUser($xidentifier, $id);
+			}
+			else
+			{
+				$user = JUser::getInstance($id);
+			}
 
 			if (! $user->id)
 			{
