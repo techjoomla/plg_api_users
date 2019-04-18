@@ -164,15 +164,8 @@ class UsersApiResourceUser extends ApiResource
 		 */
 		if ($id)
 		{
-			if ($xidentifier)
-			{
-				// Get a user object
-				$user = $this->retriveUser($xidentifier, $id);
-			}
-			else
-			{
-				$user = JUser::getInstance($id);
-			}
+			// Get a user object
+			$user = $this->retriveUser($xidentifier, $id);
 
 			if (! $user->id)
 			{
