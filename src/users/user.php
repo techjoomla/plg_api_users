@@ -34,7 +34,7 @@ class UsersApiResourceUser extends ApiResource
 		$params = JComponentHelper::getParams("com_users");
 		$response = new stdClass;
 
-		$xidentifier = $app->input->server->get('HTTP_IDENTIFIER');
+		$xidentifier = $app->input->server->get('HTTP_X_IDENTIFIER');
 		$fidentifier = $app->input->server->get('HTTP_FORCECREATE');
 
 		if ($formData['username'] == '' || $formData['name'] == '' || $formData['email'] == '')
@@ -156,7 +156,7 @@ class UsersApiResourceUser extends ApiResource
 	{
 		$input = JFactory::getApplication()->input;
 		$id = $input->get('id', 0, 'int');
-		$xidentifier	= $input->server->get('HTTP_IDENTIFIER', '', 'String');
+		$xidentifier	= $input->server->get('HTTP_X_IDENTIFIER', '', 'String');
 
 		/*
 		 * If we have an id try to fetch the user
@@ -271,7 +271,7 @@ class UsersApiResourceUser extends ApiResource
 	{
 		$app = JFactory::getApplication();
 		$userIdentifier = $app->input->get('id', 0, 'STRING');
-		$xidentifier = $app->input->server->get('HTTP_IDENTIFIER');
+		$xidentifier = $app->input->server->get('HTTP_X_IDENTIFIER', '', 'String');
 
 		$loggedUser = JFactory::getUser();
 
