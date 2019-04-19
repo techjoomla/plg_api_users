@@ -141,6 +141,29 @@ class UsersApiResourceUser extends ApiResource
 	}
 
 	/**
+	 * Funtion to remove sensitive user info fields like password
+	 *
+	 * @param   Object  $user    The user object.
+	 * @param   Array   $fields  Array of fields to be unset
+	 *
+	 * @return  object|void  $user
+	 *
+	 * @since   2.0.1
+	 */
+	protected function sanitizeUserFields($user, $fields = array('password', 'password_clear', 'otpKey', 'otep'))
+	{
+		foreach ($fields as $f)
+		{
+			if (isset($user->{$f}))
+			{
+				unset($user->{$f});
+			}
+		}
+
+		return $user;
+	}
+
+	/**
 	 * Function get for user record.
 	 *
 	 * @return object|void User details on success otherwise raise error
@@ -150,7 +173,7 @@ class UsersApiResourceUser extends ApiResource
 	public function get()
 	{
 		$input       = JFactory::getApplication()->input;
-		$id          = $input->get('id', 0, 'int');
+		$id          = $input->get('id', 0, 'string');
 		$xIdentifier = $input->server->get('HTTP_X_IDENTIFIER', '', 'string');
 
 		/*
@@ -162,14 +185,12 @@ class UsersApiResourceUser extends ApiResource
 			// Get user object
 			$user = $this->retriveUser($xIdentifier, $id);
 
-			if (! $user->id)
+			if (!$user->id)
 			{
 				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
 
 				return;
 			}
-
-			$this->plugin->setResponse($user);
 		}
 		else
 		{
@@ -179,9 +200,11 @@ class UsersApiResourceUser extends ApiResource
 			{
 				ApiError::raiseError(400, JText::_('JERROR_ALERTNOAUTHOR'));
 			}
-
-			$this->plugin->setResponse($user);
 		}
+
+		$user = $this->sanitizeUserFields($user);
+
+		$this->plugin->setResponse($user);
 	}
 
 	/**
@@ -272,9 +295,9 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	public function delete()
 	{
-		$app = JFactory::getApplication();
+		$app            = JFactory::getApplication();
 		$userIdentifier = $app->input->get('id', 0, 'string');
-		$xIdentifier = $app->input->server->get('HTTP_X_IDENTIFIER', '', 'string');
+		$xIdentifier    = $app->input->server->get('HTTP_X_IDENTIFIER', '', 'string');
 
 		$loggedUser = JFactory::getUser();
 
