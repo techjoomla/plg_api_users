@@ -28,29 +28,22 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	public function post()
 	{
-		$app = JFactory::getApplication();
-		$userIdentifier = $app->input->get('id', 0, 'String');
-		$formData = $app->input->getArray();
-		$params = JComponentHelper::getParams("com_users");
-		$response = new stdClass;
-
-		$xidentifier = $app->input->server->get('HTTP_IDENTIFIER');
-		$fidentifier = $app->input->server->get('HTTP_FORCECREATE');
-
-		if ($formData['username'] == '' || $formData['name'] == '' || $formData['email'] == '')
-		{
-			ApiError::raiseError(400, JText::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
-
-			return;
-		}
+		$app            = JFactory::getApplication();
+		$params         = JComponentHelper::getParams("com_users");
+		$formData       = $app->input->getArray();
+		$userIdentifier = $app->input->get('id', 0, 'string');
+		$xIdentifier    = $app->input->server->get('HTTP_X_IDENTIFIER');
+		$fIdentifier    = $app->input->server->get('HTTP_FORCECREATE');
 
 		// Get current logged in user.
-		$my = JFactory::getUser();
+		$me = JFactory::getUser();
 
-		// Check if $userIdentifier is not set
+		// Check if $userIdentifier is not set - POST / CREATE user case
+
 		if (empty($userIdentifier))
 		{
-			if ($formData['password'] == '')
+			// Validate required fields
+			if ($formData['username'] == '' || $formData['name'] == '' || $formData['email'] == '' || $formData['password'] == '')
 			{
 				ApiError::raiseError(400, JText::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
 
@@ -72,33 +65,33 @@ class UsersApiResourceUser extends ApiResource
 
 			return;
 		}
+		// PATCH / EDIT user case
 		else
 		{
-			// Get a user object
-			$user = $this->retriveUser($xidentifier, $userIdentifier);
-			$passedUserGroups = array();
+			// Get a user object from xIdentifier
+			$user = $this->retriveUser($xIdentifier, $userIdentifier);
 
 			// If user is already present then update it according to access.
 			if (!empty($user->id))
 			{
-				$iAmSuperAdmin	= $my->authorise('core.admin');
+				$iAmSuperAdmin = $me->authorise('core.admin');
 
-				// Check if regular user is tring to update himself.
-				if ($my->id == $user->id || $iAmSuperAdmin)
+				// Check if regular user is trying to update his/her own profile OR if user is superadmin
+				if ($me->id == $user->id || $iAmSuperAdmin)
 				{
-					// If present then update or else dont include.
+					// If password present then update password2 or else dont include.
 					if (!empty($formData['password']))
 					{
 						$formData['password2'] = $formData['password'];
 					}
 
-					// Add newly added groups and keep the old one as it is.
+					/*// Add newly added groups and keep the old one as it is.
 					if (!empty($formData['groups']))
 					{
-						$passedUserGroups['groups'] = array_unique(array_merge($user->groups, $formData['groups']));
-					}
+						$formData['groups'] = array_unique(array_merge($user->groups, $formData['groups']));
+					}*/
 
-					$response = $this->storeUser($user, $passedUserGroups);
+					$response = $this->storeUser($user, $formData);
 					$this->plugin->setResponse($response);
 
 					return;
@@ -112,11 +105,12 @@ class UsersApiResourceUser extends ApiResource
 			}
 			else
 			{
-				if ($fidentifier)
+				// Forced user creation
+				if ($fIdentifier)
 				{
 					$user = new JUser;
 
-					if ($formData['password'] == '')
+					if ($formData['username'] == '' || $formData['name'] == '' || $formData['email'] == '' || $formData['password'] == '')
 					{
 						ApiError::raiseError(400, JText::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
 
@@ -135,9 +129,10 @@ class UsersApiResourceUser extends ApiResource
 
 					return;
 				}
+				// User trying to be updated not found
 				else
 				{
-					ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_ABSENT_MESSAGE'));
+					ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
 
 					return;
 				}
@@ -222,8 +217,22 @@ class UsersApiResourceUser extends ApiResource
 	private function storeUser($user, $formData, $isNew = 0)
 	{
 		$response = new stdClass;
+		$ignore   = array();
 
-		if (!$user->bind($formData))
+		// Ignore pasword field if not set to avoid warning on bind()
+		if (!isset($formData['password']))
+		{
+			$ignore[] = 'password';
+		}
+
+		// In case of edit user, set formData->id as $user->id no matter what is passed in x-identifier
+		// Otherwise - it will try to create new user
+		if (!$isNew)
+		{
+			$formData['id'] = $user->id;
+		}
+
+		if (!$user->bind($formData, $ignore))
 		{
 			ApiError::raiseError(400, $user->getError());
 
@@ -237,6 +246,7 @@ class UsersApiResourceUser extends ApiResource
 			return;
 		}
 
+		// Set user id to be returned
 		$response->id = $user->id;
 
 		if ($isNew)
@@ -262,14 +272,14 @@ class UsersApiResourceUser extends ApiResource
 	{
 		$app = JFactory::getApplication();
 		$userIdentifier = $app->input->get('id', 0, 'STRING');
-		$xidentifier = $app->input->server->get('HTTP_IDENTIFIER');
+		$xIdentifier = $app->input->server->get('HTTP_X_IDENTIFIER');
 
 		$loggedUser = JFactory::getUser();
 
 		// Check if I am a Super Admin
 		$iAmSuperAdmin = $loggedUser->authorise('core.admin');
 
-		$userToDelete = $this->retriveUser($xidentifier, $userIdentifier);
+		$userToDelete = $this->retriveUser($xIdentifier, $userIdentifier);
 
 		if (!$userToDelete->id)
 		{
@@ -317,7 +327,7 @@ class UsersApiResourceUser extends ApiResource
 	/**
 	 * Function retriveUser for get user details depending upon the identifier.
 	 *
-	 * @param   string  $xidentifier     Flag to differentiate the column value.
+	 * @param   string  $xIdentifier     Flag to differentiate the column value.
 	 *
 	 * @param   string  $userIdentifier  username
 	 *
@@ -325,11 +335,11 @@ class UsersApiResourceUser extends ApiResource
 	 *
 	 * @since   2.0
 	 */
-	private function retriveUser($xidentifier, $userIdentifier)
+	private function retriveUser($xIdentifier, $userIdentifier)
 	{
 		$user = new stdClass;
 
-		switch ($xidentifier)
+		switch ($xIdentifier)
 		{
 			case 'username':
 				$userId = JUserHelper::getUserId($userIdentifier);
