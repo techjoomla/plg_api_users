@@ -151,7 +151,7 @@ class UsersApiResourceUser extends ApiResource
 	{
 		$input       = JFactory::getApplication()->input;
 		$id          = $input->get('id', 0, 'int');
-		$xIdentifier = $input->server->get('HTTP_X_IDENTIFIER', '', 'String');
+		$xIdentifier = $input->server->get('HTTP_X_IDENTIFIER', '', 'string');
 
 		/*
 		 * If we have an id try to fetch the user
@@ -273,8 +273,8 @@ class UsersApiResourceUser extends ApiResource
 	public function delete()
 	{
 		$app = JFactory::getApplication();
-		$userIdentifier = $app->input->get('id', 0, 'STRING');
-		$xIdentifier = $app->input->server->get('HTTP_X_IDENTIFIER');
+		$userIdentifier = $app->input->get('id', 0, 'string');
+		$xIdentifier = $app->input->server->get('HTTP_X_IDENTIFIER', '', 'string');
 
 		$loggedUser = JFactory::getUser();
 
