@@ -285,7 +285,7 @@ class UsersApiResourceUser extends ApiResource
 		// Check if I am a Super Admin
 		$iAmSuperAdmin = $loggedUser->authorise('core.admin');
 
-		$userToDelete = $this->retriveUser($xIdentifier, $userIdentifier);
+		$userToDelete = $this->retriveUser($userIdentifier);
 
 		if (!$userToDelete->id)
 		{
