@@ -20,6 +20,14 @@ defined('_JEXEC') or die();
 class UsersApiResourceUser extends ApiResource
 {
 	/**
+	 * Array of fields to be unset
+	 *
+	 * @var    array
+	 * @since  2.0.1
+	 */
+	private $fieldsToSanitize = array('password', 'password_clear', 'otpKey', 'otep');
+
+	/**
 	 * Function to create and edit user record.
 	 *
 	 * @return object|void User details on success. raise error on failure.
@@ -33,8 +41,15 @@ class UsersApiResourceUser extends ApiResource
 		$formData       = $app->input->getArray();
 		$userIdentifier = $app->input->get('id', 0, 'string');
 
+		if (isset($formData['fields']))
+		{
+			$formData['com_fields'] = $formData['fields'];
+			unset($formData['fields']);
+		}
+
 		// Get current logged in user.
 		$me = $this->plugin->get('user');
+		$iAmSuperAdmin = $me->authorise('core.create');
 
 		if (!empty($userIdentifier))
 		{
@@ -42,8 +57,6 @@ class UsersApiResourceUser extends ApiResource
 
 			if (!empty($user->id))
 			{
-				$iAmSuperAdmin = $me->authorise('core.admin');
-
 				// Check if regular user is trying to update his/her own profile OR if user is superadmin
 				if ($me->id == $user->id || $iAmSuperAdmin)
 				{
@@ -81,6 +94,13 @@ class UsersApiResourceUser extends ApiResource
 		// Check if $userIdentifier is not set - POST / CREATE user case
 		else
 		{
+			if (!$iAmSuperAdmin)
+			{
+				ApiError::raiseError(400, JText::_('JERROR_ALERTNOAUTHOR'));
+
+				return;
+			}
+
 			// Validate required fields
 			if ($formData['username'] == '' || $formData['name'] == '' || $formData['email'] == '')
 			{
@@ -109,24 +129,21 @@ class UsersApiResourceUser extends ApiResource
 	/**
 	 * Funtion to remove sensitive user info fields like password
 	 *
-	 * @param   Object  $user    The user object.
-	 * @param   Array   $fields  Array of fields to be unset
+	 * @param   Object  &$user  The user object.
 	 *
 	 * @return  object|void  $user
 	 *
 	 * @since   2.0.1
 	 */
-	protected function sanitizeUserFields($user, $fields = array('password', 'password_clear', 'otpKey', 'otep'))
+	protected function sanitizeUserFields(&$user)
 	{
-		foreach ($fields as $f)
+		foreach ($this->fieldsToSanitize as $f)
 		{
 			if (isset($user->{$f}))
 			{
 				unset($user->{$f});
 			}
 		}
-
-		return $user;
 	}
 
 	/**
@@ -167,7 +184,7 @@ class UsersApiResourceUser extends ApiResource
 			}
 		}
 
-		$user = $this->sanitizeUserFields($user);
+		$this->sanitizeUserFields($user);
 
 		$this->plugin->setResponse($user);
 	}
@@ -328,7 +345,7 @@ class UsersApiResourceUser extends ApiResource
 
 		// Flag to differentiate the column value
 		$app            = JFactory::getApplication();
-		$xIdentifier    = $app->input->server->get('HTTP_X_IDENTIFIER', '', 'string');
+		$xIdentifier    = $app->input->server->get('HTTP_X_IDENTIFIER', '', 'WORD');
 
 		switch ($xIdentifier)
 		{
