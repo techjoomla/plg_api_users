@@ -345,7 +345,7 @@ class UsersApiResourceUser extends ApiResource
 
 		// Flag to differentiate the column value
 		$app            = JFactory::getApplication();
-		$xIdentifier    = $app->input->server->get('HTTP_X_IDENTIFIER', '', 'WORD');
+		$xIdentifier    = $app->input->server->get('HTTP_X_IDENTIFIER', '');
 
 		switch ($xIdentifier)
 		{
