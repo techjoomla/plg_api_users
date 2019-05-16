@@ -160,8 +160,6 @@ class UsersApiResourceJfbconnect extends ApiResource
 
 			return $provider;
 		}
-
-		return;
 	}
 
 	/**
@@ -220,7 +218,6 @@ class UsersApiResourceJfbconnect extends ApiResource
 
 		// START - Use JFB code
 		// Based on: JFB code from components/com_jfbconnect/controllers/login.php login()
-
 		$profile       = $provider->profile->fetchProfile($providerUserId, array('email'));
 		$providerEmail = $profile->get('email', null);
 
