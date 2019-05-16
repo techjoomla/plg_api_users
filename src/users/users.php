@@ -1,13 +1,15 @@
 <?php
 /**
- * @package     Joomla.Administrator
- * @subpackage  com_trading
+ * @package     API
+ * @subpackage  plg_api_users
  *
- * @copyright   Copyright (C) 2005 - 2014 Open Source Matters, Inc. All rights reserved.
- * @license     GNU General Public License version 2 or later; see LICENSE.txt
+ * @author      Techjoomla <extensions@techjoomla.com>
+ * @copyright   Copyright (C) 2009 - 2019 Techjoomla, Tekdi Technologies Pvt. Ltd. All rights reserved.
+ * @license     http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL
  */
+
 // No direct access.
-defined('_JEXEC') or die;
+defined('_JEXEC') or die('Restricted access');
 
 jimport('joomla.user.user');
 jimport('joomla.plugin.plugin');
