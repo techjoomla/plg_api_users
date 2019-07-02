@@ -20,6 +20,14 @@ defined('_JEXEC') or die();
 class UsersApiResourceUser extends ApiResource
 {
 	/**
+	 * Array of fields to be unset
+	 *
+	 * @var    array
+	 * @since  2.0.1
+	 */
+	private $fieldsToSanitize = array('password', 'password_clear', 'otpKey', 'otep');
+
+	/**
 	 * Function to create and edit user record.
 	 *
 	 * @return object|void User details on success. raise error on failure.
@@ -28,29 +36,73 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	public function post()
 	{
-		$app = JFactory::getApplication();
-		$userIdentifier = $app->input->get('id', 0, 'String');
-		$formData = $app->input->getArray();
-		$params = JComponentHelper::getParams("com_users");
-		$response = new stdClass;
+		$app            = JFactory::getApplication();
+		$params         = JComponentHelper::getParams("com_users");
+		$formData       = $app->input->getArray();
+		$userIdentifier = $app->input->get('id', 0, 'string');
 
-		$xidentifier = $app->input->server->get('HTTP_X_IDENTIFIER');
-		$fidentifier = $app->input->server->get('HTTP_FORCECREATE');
-
-		if ($formData['username'] == '' || $formData['name'] == '' || $formData['email'] == '')
+		if (isset($formData['fields']))
 		{
-			ApiError::raiseError(400, JText::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
-
-			return;
+			$formData['com_fields'] = $formData['fields'];
+			unset($formData['fields']);
 		}
 
 		// Get current logged in user.
-		$my = JFactory::getUser();
+		$me = $this->plugin->get('user');
+		$iAmSuperAdmin = $me->authorise('core.create');
 
-		// Check if $userIdentifier is not set
-		if (empty($userIdentifier))
+		if (!empty($userIdentifier))
 		{
-			if ($formData['password'] == '')
+			$user = $this->retriveUser($userIdentifier);
+
+			if (!empty($user->id))
+			{
+				// Check if regular user is trying to update his/her own profile OR if user is superadmin
+				if ($me->id == $user->id || $iAmSuperAdmin)
+				{
+					// If password present then update password2 or else dont include.
+					if (!empty($formData['password']))
+					{
+						$formData['password2'] = $formData['password'];
+					}
+
+					/*// Add newly added groups and keep the old one as it is.
+					if (!empty($formData['groups']))
+					{
+						$formData['groups'] = array_unique(array_merge($user->groups, $formData['groups']));
+					}*/
+
+					$response = $this->storeUser($user, $formData);
+					$this->plugin->setResponse($response);
+
+					return;
+				}
+				else
+				{
+					ApiError::raiseError(400, JText::_('JERROR_ALERTNOAUTHOR'));
+
+					return;
+				}
+			}
+			else
+			{
+				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
+
+				return;
+			}
+		}
+		// Check if $userIdentifier is not set - POST / CREATE user case
+		else
+		{
+			if (!$iAmSuperAdmin)
+			{
+				ApiError::raiseError(400, JText::_('JERROR_ALERTNOAUTHOR'));
+
+				return;
+			}
+
+			// Validate required fields
+			if ($formData['username'] == '' || $formData['name'] == '' || $formData['email'] == '')
 			{
 				ApiError::raiseError(400, JText::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
 
@@ -72,75 +124,24 @@ class UsersApiResourceUser extends ApiResource
 
 			return;
 		}
-		else
+	}
+
+	/**
+	 * Funtion to remove sensitive user info fields like password
+	 *
+	 * @param   Object  &$user  The user object.
+	 *
+	 * @return  object|void  $user
+	 *
+	 * @since   2.0.1
+	 */
+	protected function sanitizeUserFields(&$user)
+	{
+		foreach ($this->fieldsToSanitize as $f)
 		{
-			// Get a user object
-			$user = $this->retriveUser($xidentifier, $userIdentifier);
-			$passedUserGroups = array();
-
-			// If user is already present then update it according to access.
-			if (!empty($user->id))
+			if (isset($user->{$f}))
 			{
-				$iAmSuperAdmin	= $my->authorise('core.admin');
-
-				// Check if regular user is tring to update himself.
-				if ($my->id == $user->id || $iAmSuperAdmin)
-				{
-					// If present then update or else dont include.
-					if (!empty($formData['password']))
-					{
-						$formData['password2'] = $formData['password'];
-					}
-
-					// Add newly added groups and keep the old one as it is.
-					if (!empty($formData['groups']))
-					{
-						$passedUserGroups['groups'] = array_unique(array_merge($user->groups, $formData['groups']));
-					}
-
-					$response = $this->storeUser($user, $passedUserGroups);
-					$this->plugin->setResponse($response);
-
-					return;
-				}
-				else
-				{
-					ApiError::raiseError(400, JText::_('JERROR_ALERTNOAUTHOR'));
-
-					return;
-				}
-			}
-			else
-			{
-				if ($fidentifier)
-				{
-					$user = new JUser;
-
-					if ($formData['password'] == '')
-					{
-						ApiError::raiseError(400, JText::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
-
-						return;
-					}
-
-					// Set default group if nothing is passed for group.
-					if (empty($formData['groups']))
-					{
-						$formData['groups'] = array($params->get("new_usertype", 2));
-					}
-
-					// Create new user.
-					$response = $this->storeUser($user, $formData, 1);
-					$this->plugin->setResponse($response);
-
-					return;
-				}
-				else
-				{
-					ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_ABSENT_MESSAGE'));
-
-					return;
-				}
+				unset($user->{$f});
 			}
 		}
 	}
@@ -154,9 +155,8 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	public function get()
 	{
-		$input = JFactory::getApplication()->input;
-		$id = $input->get('id', 0, 'int');
-		$xidentifier	= $input->server->get('HTTP_X_IDENTIFIER', '', 'String');
+		$input       = JFactory::getApplication()->input;
+		$id          = $input->get('id', 0, 'string');
 
 		/*
 		 * If we have an id try to fetch the user
@@ -164,17 +164,15 @@ class UsersApiResourceUser extends ApiResource
 		 */
 		if ($id)
 		{
-			// Get a user object
-			$user = $this->retriveUser($xidentifier, $id);
+			// Get user object
+			$user = $this->retriveUser($id);
 
-			if (! $user->id)
+			if (!$user->id)
 			{
 				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
 
 				return;
 			}
-
-			$this->plugin->setResponse($user);
 		}
 		else
 		{
@@ -184,9 +182,11 @@ class UsersApiResourceUser extends ApiResource
 			{
 				ApiError::raiseError(400, JText::_('JERROR_ALERTNOAUTHOR'));
 			}
-
-			$this->plugin->setResponse($user);
 		}
+
+		$this->sanitizeUserFields($user);
+
+		$this->plugin->setResponse($user);
 	}
 
 	/**
@@ -224,8 +224,22 @@ class UsersApiResourceUser extends ApiResource
 	private function storeUser($user, $formData, $isNew = 0)
 	{
 		$response = new stdClass;
+		$ignore   = array();
 
-		if (!$user->bind($formData))
+		// Ignore pasword field if not set to avoid warning on bind()
+		if (!isset($formData['password']))
+		{
+			$ignore[] = 'password';
+		}
+
+		// In case of edit user, set formData->id as $user->id no matter what is passed in x-identifier
+		// Otherwise - it will try to create new user
+		if (!$isNew)
+		{
+			$formData['id'] = $user->id;
+		}
+
+		if (!$user->bind($formData, $ignore))
 		{
 			ApiError::raiseError(400, $user->getError());
 
@@ -239,6 +253,7 @@ class UsersApiResourceUser extends ApiResource
 			return;
 		}
 
+		// Set user id to be returned
 		$response->id = $user->id;
 
 		if ($isNew)
@@ -262,16 +277,15 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	public function delete()
 	{
-		$app = JFactory::getApplication();
-		$userIdentifier = $app->input->get('id', 0, 'STRING');
-		$xidentifier = $app->input->server->get('HTTP_X_IDENTIFIER', '', 'String');
+		$app            = JFactory::getApplication();
+		$userIdentifier = $app->input->get('id', 0, 'string');
 
 		$loggedUser = JFactory::getUser();
 
 		// Check if I am a Super Admin
 		$iAmSuperAdmin = $loggedUser->authorise('core.admin');
 
-		$userToDelete = $this->retriveUser($xidentifier, $userIdentifier);
+		$userToDelete = $this->retriveUser($userIdentifier);
 
 		if (!$userToDelete->id)
 		{
@@ -319,19 +333,21 @@ class UsersApiResourceUser extends ApiResource
 	/**
 	 * Function retriveUser for get user details depending upon the identifier.
 	 *
-	 * @param   string  $xidentifier     Flag to differentiate the column value.
-	 *
 	 * @param   string  $userIdentifier  username
 	 *
 	 * @return  object  $user  Juser object if user exist otherwise std class.
 	 *
 	 * @since   2.0
 	 */
-	private function retriveUser($xidentifier, $userIdentifier)
+	private function retriveUser($userIdentifier)
 	{
 		$user = new stdClass;
 
-		switch ($xidentifier)
+		// Flag to differentiate the column value
+		$app            = JFactory::getApplication();
+		$xIdentifier    = $app->input->server->get('HTTP_X_IDENTIFIER', '');
+
+		switch ($xIdentifier)
 		{
 			case 'username':
 				$userId = JUserHelper::getUserId($userIdentifier);
