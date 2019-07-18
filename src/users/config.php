@@ -45,11 +45,11 @@ class UsersApiResourceConfig extends ApiResource
 		$obj->global_config = $this->getJoomlaConfig();
 		$obj->plugin_config = $this->getpluginConfig();
 
-		$installed_languages = JLanguageHelper::getLanguages();
+		$installedLanguages = JLanguageHelper::getLanguages();
 		$languages = array();
 
-		foreach($installed_languages as $lang){
-			$languages[] = substr($lang->lang_code, 0);
+		foreach($installedLanguages as $lang){
+			$languages[] = $lang->lang_code;
 		}
 
 		$obj->languages = $languages;
