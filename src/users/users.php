@@ -359,7 +359,7 @@ class UsersApiResourceUsers extends ApiResource
 			$user = JUser::getInstance($id);
 			if (!$user->id)
 			{
-				$this->plugin->setResponse($this->getErrorResponse(JText::_( 'PLG_API_USERS_USER_NOT_FOUND_MESSAGE' )));
+				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
 
 				return;
 			}
@@ -368,7 +368,21 @@ class UsersApiResourceUsers extends ApiResource
 		else
 		{
 			$model = new UsersModelUsers;
+
+			$app = JFactory::getApplication('administrator');
+
+			$app->setUserState("com_users.users.default.filter.search", $input->get('search'));
+			$app->setUserState("com_users.users.default.filter.active", '0');
+			$app->setUserState("com_users.users.default.filter.state", '0');
+
 			$users = $model->getItems();
+
+			if (!$users)
+			{
+				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
+
+				return;
+			}
 
 			foreach ($users as $k => $v)
 			{
