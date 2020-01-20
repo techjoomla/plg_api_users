@@ -352,6 +352,7 @@ class UsersApiResourceUsers extends ApiResource
 	{
 
 		$input = JFactory::getApplication()->input;
+		$res = new stdClass();
 
 		// If we have an id try to fetch the user
 		if ($id = $input->get('id'))
@@ -379,7 +380,10 @@ class UsersApiResourceUsers extends ApiResource
 
 			if (!$users)
 			{
-				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
+				$res->status = true;
+				$res->code = '200';
+				$res->message = JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE');
+				$this->plugin->setResponse($res);
 
 				return;
 			}
