@@ -353,18 +353,23 @@ class UsersApiResourceUsers extends ApiResource
 
 		$input = JFactory::getApplication()->input;
 		$res = new stdClass();
+		$res->result = array();
 
 		// If we have an id try to fetch the user
 		if ($id = $input->get('id'))
 		{
 			$user = JUser::getInstance($id);
+
 			if (!$user->id)
 			{
-				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
+				$res->empty_message = JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE');
+				$this->plugin->setResponse($res);
 
 				return;
 			}
-			$this->plugin->setResponse($user);
+
+			$res->result = $user;
+			$this->plugin->setResponse($res);
 		}
 		else
 		{
@@ -376,24 +381,22 @@ class UsersApiResourceUsers extends ApiResource
 			$app->setUserState("com_users.users.default.filter.active", '0');
 			$app->setUserState("com_users.users.default.filter.state", '0');
 
-			$users = $model->getItems();
+			$res->result = $model->getItems();
 
-			if (!$users)
+			if (!$res->result)
 			{
-				$res->status = true;
-				$res->code = '200';
-				$res->message = JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE');
+				$res->empty_message = JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE');
 				$this->plugin->setResponse($res);
 
 				return;
 			}
 
-			foreach ($users as $k => $v)
+			foreach ($res->result as $k => $v)
 			{
-				unset($users[$k]->password);
+				unset($res->result[$k]->password);
 			}
 
-			$this->plugin->setResponse($users);
+			$this->plugin->setResponse($res);
 		}
 	}
 
