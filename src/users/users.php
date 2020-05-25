@@ -350,31 +350,24 @@ class UsersApiResourceUsers extends ApiResource
 	{
 
 		$input = JFactory::getApplication()->input;
+		$res = new stdClass();
 
-		// If we have an id try to fetch the user
-		if ($id = $input->get('id'))
+		$model = new UsersModelUsers;
+
+		$app = JFactory::getApplication('administrator');
+
+		$app->setUserState("com_users.users.default.filter.search", $input->get('search'));
+		$app->setUserState("com_users.users.default.filter.active", '0');
+		$app->setUserState("com_users.users.default.filter.state", '0');
+
+		$res->result = $model->getItems();
+
+		foreach ($res->result as $k => $v)
 		{
-			$user = JUser::getInstance($id);
-			if (!$user->id)
-			{
-				$this->plugin->setResponse($this->getErrorResponse(JText::_( 'PLG_API_USERS_USER_NOT_FOUND_MESSAGE' )));
-
-				return;
-			}
-			$this->plugin->setResponse($user);
+			unset($res->result[$k]->password);
 		}
-		else
-		{
-			$model = new UsersModelUsers;
-			$users = $model->getItems();
 
-			foreach ($users as $k => $v)
-			{
-				unset($users[$k]->password);
-			}
-
-			$this->plugin->setResponse($users);
-		}
+		$this->plugin->setResponse($res);
 	}
 
 	/**

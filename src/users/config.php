@@ -44,9 +44,16 @@ class UsersApiResourceConfig extends ApiResource
 
 		$obj->global_config = $this->getJoomlaConfig();
 		$obj->plugin_config = $this->getpluginConfig();
-			
 
-		$this->plugin->setResponse($obj);	
+		$installedLanguages = JLanguageHelper::getLanguages();
+		$languages = array();
+
+		foreach($installedLanguages as $lang){
+			$languages[] = $lang->lang_code;
+		}
+
+		$obj->languages = $languages;
+		$this->plugin->setResponse($obj);
 	}
 
 	public function post()
