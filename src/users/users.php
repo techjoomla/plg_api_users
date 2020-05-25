@@ -353,40 +353,23 @@ class UsersApiResourceUsers extends ApiResource
 
 		$input = JFactory::getApplication()->input;
 		$res = new stdClass();
-		$res->result = array();
 
-		// If we have an id try to fetch the user
-		if ($id = $input->get('id'))
+		$model = new UsersModelUsers;
+
+		$app = JFactory::getApplication('administrator');
+
+		$app->setUserState("com_users.users.default.filter.search", $input->get('search'));
+		$app->setUserState("com_users.users.default.filter.active", '0');
+		$app->setUserState("com_users.users.default.filter.state", '0');
+
+		$res->result = $model->getItems();
+
+		foreach ($res->result as $k => $v)
 		{
-			$user = JUser::getInstance($id);
-
-			if (!$user->id)
-			{
-				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
-			}
-
-			$res->result = $user;
-			$this->plugin->setResponse($res);
+			unset($res->result[$k]->password);
 		}
-		else
-		{
-			$model = new UsersModelUsers;
 
-			$app = JFactory::getApplication('administrator');
-
-			$app->setUserState("com_users.users.default.filter.search", $input->get('search'));
-			$app->setUserState("com_users.users.default.filter.active", '0');
-			$app->setUserState("com_users.users.default.filter.state", '0');
-
-			$res->result = $model->getItems();
-
-			foreach ($res->result as $k => $v)
-			{
-				unset($res->result[$k]->password);
-			}
-
-			$this->plugin->setResponse($res);
-		}
+		$this->plugin->setResponse($res);
 	}
 
 	/**
