@@ -362,10 +362,7 @@ class UsersApiResourceUsers extends ApiResource
 
 			if (!$user->id)
 			{
-				$res->empty_message = JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE');
-				$this->plugin->setResponse($res);
-
-				return;
+				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
 			}
 
 			$res->result = $user;
@@ -382,14 +379,6 @@ class UsersApiResourceUsers extends ApiResource
 			$app->setUserState("com_users.users.default.filter.state", '0');
 
 			$res->result = $model->getItems();
-
-			if (!$res->result)
-			{
-				$res->empty_message = JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE');
-				$this->plugin->setResponse($res);
-
-				return;
-			}
 
 			foreach ($res->result as $k => $v)
 			{
