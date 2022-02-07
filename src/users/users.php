@@ -301,31 +301,30 @@ class UsersApiResourceUsers extends ApiResource
 			}
 			*/
 			/* Update profile type */
-			$profiles = FD::model( 'profiles' );
-			$all_profiles = $profiles->getAllProfiles();
-
-			foreach ($all_profiles as $key) {
-				if($key->id == $data['profile_id']){
-					$profiles->updateUserProfile($user->id,$data['profile_id']);
-				}
-			}
 
 			$mail_sent = $this->sendRegisterEmail($data);
 
 			$easysocial = JPATH_ADMINISTRATOR .'/components/com_easysocial/easysocial.php';
 			//eb version
-			if( JFile::exists( $easysocial ) )
+			if( JFile::exists( $easysocial ) && JComponentHelper::isEnabled('com_easysocial', true))
 			{
+				$profiles = FD::model( 'profiles' );
+				$all_profiles = $profiles->getAllProfiles();
+
+				foreach ($all_profiles as $key) {
+					if($key->id == $data['profile_id']){
+						$profiles->updateUserProfile($user->id,$data['profile_id']);
+					}
+				}
 				$pobj = $this->createEsprofile($user->id);
+				// Assign badge for the person.
+				$badge = FD::badges();
+				$badge->log( 'com_easysocial' , 'registration.create' , $user->id , JText::_( 'COM_EASYSOCIAL_REGISTRATION_BADGE_REGISTERED' ) );
 				//$message = "created of username-" . $user->username .",send mail of details please check";
 				$message = JText::_('PLG_API_USERS_ACCOUNT_CREATED_SUCCESSFULLY_MESSAGE');
 			}
 			else
 			$message = JText::_('PLG_API_USERS_ACCOUNT_CREATED_SUCCESSFULLY_MESSAGE');
-
-			// Assign badge for the person.
-			$badge = FD::badges();
-			$badge->log( 'com_easysocial' , 'registration.create' , $user->id , JText::_( 'COM_EASYSOCIAL_REGISTRATION_BADGE_REGISTERED' ) );
 
 		}
 		$userid = $user->id;
@@ -353,31 +352,24 @@ class UsersApiResourceUsers extends ApiResource
 	{
 
 		$input = JFactory::getApplication()->input;
+		$res = new stdClass();
 
-		// If we have an id try to fetch the user
-		if ($id = $input->get('id'))
+		$model = new UsersModelUsers;
+
+		$app = JFactory::getApplication('administrator');
+
+		$app->setUserState("com_users.users.default.filter.search", $input->get('search'));
+		$app->setUserState("com_users.users.default.filter.active", '0');
+		$app->setUserState("com_users.users.default.filter.state", '0');
+
+		$res->result = $model->getItems();
+
+		foreach ($res->result as $k => $v)
 		{
-			$user = JUser::getInstance($id);
-			if (!$user->id)
-			{
-				$this->plugin->setResponse($this->getErrorResponse(JText::_( 'PLG_API_USERS_USER_NOT_FOUND_MESSAGE' )));
-
-				return;
-			}
-			$this->plugin->setResponse($user);
+			unset($res->result[$k]->password);
 		}
-		else
-		{
-			$model = new UsersModelUsers;
-			$users = $model->getItems();
 
-			foreach ($users as $k => $v)
-			{
-				unset($users[$k]->password);
-			}
-
-			$this->plugin->setResponse($users);
-		}
+		$this->plugin->setResponse($res);
 	}
 
 	/**
