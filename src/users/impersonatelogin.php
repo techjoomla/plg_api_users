@@ -13,6 +13,7 @@ defined('_JEXEC') or die('Restricted access');
 
 require_once JPATH_SITE . '/components/com_api/vendors/php-jwt/src/JWT.php';
 use Firebase\JWT\JWT;
+
 use Joomla\CMS\Factory;
 use Joomla\CMS\User\UserHelper;
 use Joomla\CMS\Language\Text;
@@ -247,7 +248,7 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 	 */
 	private function getUserByEmail($email)
 	{
-		$db = JFactory::getDbo();
+		$db = Factory::getDbo();
 		$query = $db->getQuery(true)
 			->select($db->quoteName('id'))
 			->from($db->quoteName('#__users'))
