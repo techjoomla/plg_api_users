@@ -78,8 +78,7 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 
 		if (preg_match('/email:(\S+)/', $userToImpersonate, $matches))
 		{
-			$userId = $matches[1];
-			$email  = 1;
+			$userId = $this->getUserByEmail($matches[1]);
 		}
 		elseif (preg_match('/username:(\S+)/', $userToImpersonate, $matches))
 		{
@@ -235,5 +234,27 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 		$user->store();
 
 		return $id;
+	}
+
+	/**
+	 * Function to fetch user id by email
+	 *
+	 * @param   string   $email  User email
+	 *
+	 * @return  integer   User Id.
+	 *
+	 * @since   1.0
+	 */
+	private function getUserByEmail($email)
+	{
+		$db = JFactory::getDbo();
+		$query = $db->getQuery(true)
+			->select($db->quoteName('id'))
+			->from($db->quoteName('#__users'))
+			->where($db->quoteName('email') . ' = ' . $db->quote($email));
+		$db->setQuery($query);
+		$user = $db->loadResult();
+
+		return $user;
 	}
 }
