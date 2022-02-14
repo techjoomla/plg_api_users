@@ -4,7 +4,7 @@
  * @subpackage  plg_api_users
  *
  * @author      Techjoomla <extensions@techjoomla.com>
- * @copyright   Copyright (C) 2009 - 2019 Techjoomla, Tekdi Technologies Pvt. Ltd. All rights reserved.
+ * @copyright   Copyright (C) 2009 - 2022 Techjoomla, Tekdi Technologies Pvt. Ltd. All rights reserved.
  * @license     GNU GPLv2 <http://www.gnu.org/licenses/old-licenses/gpl-2.0.html>
  */
 
@@ -14,6 +14,12 @@ defined('_JEXEC') or die('Restricted access');
 require_once JPATH_SITE . '/components/com_api/vendors/php-jwt/src/JWT.php';
 use Firebase\JWT\JWT;
 
+use Joomla\CMS\Factory;
+use Joomla\CMS\User\UserHelper;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Table\Table;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\Component\ComponentHelper;
 
 JModelLegacy::addIncludePath(JPATH_SITE . 'components/com_api/models');
 require_once JPATH_SITE . '/components/com_api/libraries/authentication/user.php';
@@ -22,12 +28,12 @@ require_once JPATH_ADMINISTRATOR . '/components/com_api/models/key.php';
 require_once JPATH_ADMINISTRATOR . '/components/com_api/models/keys.php';
 
 /**
- * Login API resource class
+ * Impersonate Login API resource class
  *
  * @package  API
  * @since    1.6.0
  */
-class UsersApiResourceLogin extends ApiResource
+class UsersApiResourceImpersonateLogin extends ApiResource
 {
 	/**
 	 * Get method
@@ -36,7 +42,7 @@ class UsersApiResourceLogin extends ApiResource
 	 */
 	public function get()
 	{
-		$this->plugin->setResponse(JText::_('PLG_API_USERS_GET_METHOD_NOT_ALLOWED_MESSAGE'));
+		$this->plugin->setResponse(Text::_('PLG_API_USERS_GET_METHOD_NOT_ALLOWED_MESSAGE'));
 	}
 
 	/**
@@ -57,40 +63,50 @@ class UsersApiResourceLogin extends ApiResource
 	public function keygen()
 	{
 		// Init variables
-		$obj      = new stdclass;
-		$app      = JFactory::getApplication();
-		$username = $app->input->get('username', '', 'STRING');
-		$password = $app->input->get('password', '', 'STRING');
+		$obj              = new stdclass;
+		$jinput           = Factory::getApplication()->input;
+		$xImpersonate     = $jinput->server->get('X-Impersonate', '', 'STRING');
+		$httpXImpersonate = $jinput->server->get('HTTP_X_IMPERSONATE', '', 'STRING');
 
-		// Authenticate User
-		jimport('joomla.user.authentication');
-
-		$authenticate = JAuthentication::getInstance();
-		$response = $authenticate->authenticate(array( 'username' => $username, 'password' => $password ));
-
-		if ($response->status != JAuthentication::STATUS_SUCCESS)
+		if (!empty($xImpersonate))
 		{
-			ApiError::raiseError("403", JText::_('JLIB_LOGIN_AUTHENTICATE'));
+			$userToImpersonate = $xImpersonate;
+		}
+		elseif (!empty($httpXImpersonate))
+		{
+			$userToImpersonate = $httpXImpersonate;
 		}
 
-		$user = JFactory::getUser();
-
-		if ($username)
+		if (preg_match('/email:(\S+)/', $userToImpersonate, $matches))
 		{
-			$umodel   = new JUser;
-			$user     = $umodel->getInstance();
-
-			$userId   = JUserHelper::getUserId($username);
-
-			if ($userId == null)
-			{
-				$keysModel = FD::model('Users');
-				$userId    = $keysModel->getUserId('email', $username);
-			}
+			$userId = $this->getUserByEmail($matches[1]);
+		}
+		elseif (preg_match('/username:(\S+)/', $userToImpersonate, $matches))
+		{
+			$userId = UserHelper::getUserId($matches[1]);
+		}
+		elseif (is_numeric($userToImpersonate))
+		{
+			$userId = $userToImpersonate;
 		}
 		else
 		{
-			$userId = $user->id;
+			ApiError::raiseError("403", Text::_('PLG_API_USERS_BAD_REQUEST_MESSAGE'));
+
+			return false;
+		}
+
+		if ($userId && $email)
+		{
+			$model  = FD::model('Users');
+			$userId = $model->getUserId('email', $userId);
+		}
+
+		if (!$userId)
+		{
+			ApiError::raiseError("403", Text::_('PLG_API_USERS_BAD_REQUEST_MESSAGE'));
+
+			return;
 		}
 
 		// Init vars
@@ -124,7 +140,7 @@ class UsersApiResourceLogin extends ApiResource
 				'c'      => 'key',
 				'ret'    => 'index.php?option=com_api&view=keys',
 				'option' => 'com_api',
-				JSession::getFormToken() => 1
+				Session::getFormToken() => 1
 			);
 
 			$result = $keyModel->save($data);
@@ -137,15 +153,15 @@ class UsersApiResourceLogin extends ApiResource
 			}
 
 			// Load api key table
-			JTable::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
-			$table = JTable::getInstance('Key', 'ApiTable');
+			Table::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
+			$table = Table::getInstance('Key', 'ApiTable');
 			$table->load(array('userid' => $userId));
 			$key = $table->hash;
 
 			// Add new key in easysocial table
 			$easyblog = JPATH_ROOT . '/administrator/components/com_easyblog/easyblog.php';
 
-			if (JFile::exists($easyblog) && JComponentHelper::isEnabled('com_easysocial', true))
+			if (file_exists($easyblog) && ComponentHelper::isEnabled('com_easysocial', true))
 			{
 				$this->updateEauth($user, $key);
 			}
@@ -161,9 +177,9 @@ class UsersApiResourceLogin extends ApiResource
 
 			// Set user details for response
 			$obj->id       = $userId;
-			$obj->name     = JFactory::getUser($userId)->name;
-			$obj->username = JFactory::getUser($userId)->username;
-			$obj->email    = JFactory::getUser($userId)->email;
+			$obj->name     = Factory::getUser($userId)->name;
+			$obj->username = Factory::getUser($userId)->username;
+			$obj->email    = Factory::getUser($userId)->email;
 
 			// Generate claim for jwt
 			$data = [
@@ -190,7 +206,7 @@ class UsersApiResourceLogin extends ApiResource
 		else
 		{
 			$obj->code = 403;
-			$obj->message = JText::_('PLG_API_USERS_BAD_REQUEST_MESSAGE');
+			$obj->message = Text::_('PLG_API_USERS_BAD_REQUEST_MESSAGE');
 		}
 
 		return ($obj);
@@ -219,5 +235,27 @@ class UsersApiResourceLogin extends ApiResource
 		$user->store();
 
 		return $id;
+	}
+
+	/**
+	 * Function to fetch user id by email
+	 *
+	 * @param   string   $email  User email
+	 *
+	 * @return  integer   User Id.
+	 *
+	 * @since   1.0
+	 */
+	private function getUserByEmail($email)
+	{
+		$db = Factory::getDbo();
+		$query = $db->getQuery(true)
+			->select($db->quoteName('id'))
+			->from($db->quoteName('#__users'))
+			->where($db->quoteName('email') . ' = ' . $db->quote($email));
+		$db->setQuery($query);
+		$user = $db->loadResult();
+
+		return $user;
 	}
 }
