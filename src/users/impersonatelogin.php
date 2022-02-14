@@ -22,7 +22,7 @@ require_once JPATH_ADMINISTRATOR . '/components/com_api/models/key.php';
 require_once JPATH_ADMINISTRATOR . '/components/com_api/models/keys.php';
 
 /**
- * Login API resource class
+ * Impersonate Login API resource class
  *
  * @package  API
  * @since    1.6.0
