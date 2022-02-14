@@ -13,7 +13,12 @@ defined('_JEXEC') or die('Restricted access');
 
 require_once JPATH_SITE . '/components/com_api/vendors/php-jwt/src/JWT.php';
 use Firebase\JWT\JWT;
-
+use Joomla\CMS\Factory;
+use Joomla\CMS\User\UserHelper;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Table\Table;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\Component\ComponentHelper;
 
 JModelLegacy::addIncludePath(JPATH_SITE . 'components/com_api/models');
 require_once JPATH_SITE . '/components/com_api/libraries/authentication/user.php';
@@ -36,7 +41,7 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 	 */
 	public function get()
 	{
-		$this->plugin->setResponse(JText::_('PLG_API_USERS_GET_METHOD_NOT_ALLOWED_MESSAGE'));
+		$this->plugin->setResponse(Text::_('PLG_API_USERS_GET_METHOD_NOT_ALLOWED_MESSAGE'));
 	}
 
 	/**
@@ -58,7 +63,7 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 	{
 		// Init variables
 		$obj              = new stdclass;
-		$jinput           = JFactory::getApplication()->input;
+		$jinput           = Factory::getApplication()->input;
 		$xImpersonate     = $jinput->server->get('X-Impersonate', '', 'STRING');
 		$httpXImpersonate = $jinput->server->get('HTTP_X_IMPERSONATE', '', 'STRING');
 
@@ -74,10 +79,11 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 		if (preg_match('/email:(\S+)/', $userToImpersonate, $matches))
 		{
 			$userId = $matches[1];
+			$email  = 1;
 		}
 		elseif (preg_match('/username:(\S+)/', $userToImpersonate, $matches))
 		{
-			$userId = JUserHelper::getUserId($matches[1]);
+			$userId = UserHelper::getUserId($matches[1]);
 		}
 		elseif (is_numeric($userToImpersonate))
 		{
@@ -85,12 +91,12 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 		}
 		else
 		{
-			ApiError::raiseError("403", JText::_('PLG_API_USERS_BAD_REQUEST_MESSAGE'));
+			ApiError::raiseError("403", Text::_('PLG_API_USERS_BAD_REQUEST_MESSAGE'));
 
 			return false;
 		}
 
-		if ($userId == null)
+		if ($userId && $email)
 		{
 			$model  = FD::model('Users');
 			$userId = $model->getUserId('email', $userId);
@@ -98,7 +104,7 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 
 		if (!$userId)
 		{
-			ApiError::raiseError("403", JText::_('PLG_API_USERS_BAD_REQUEST_MESSAGE'));
+			ApiError::raiseError("403", Text::_('PLG_API_USERS_BAD_REQUEST_MESSAGE'));
 
 			return;
 		}
@@ -134,7 +140,7 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 				'c'      => 'key',
 				'ret'    => 'index.php?option=com_api&view=keys',
 				'option' => 'com_api',
-				JSession::getFormToken() => 1
+				Session::getFormToken() => 1
 			);
 
 			$result = $keyModel->save($data);
@@ -147,15 +153,15 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 			}
 
 			// Load api key table
-			JTable::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
-			$table = JTable::getInstance('Key', 'ApiTable');
+			Table::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
+			$table = Table::getInstance('Key', 'ApiTable');
 			$table->load(array('userid' => $userId));
 			$key = $table->hash;
 
 			// Add new key in easysocial table
 			$easyblog = JPATH_ROOT . '/administrator/components/com_easyblog/easyblog.php';
 
-			if (JFile::exists($easyblog) && JComponentHelper::isEnabled('com_easysocial', true))
+			if (file_exists($easyblog) && ComponentHelper::isEnabled('com_easysocial', true))
 			{
 				$this->updateEauth($user, $key);
 			}
@@ -171,9 +177,9 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 
 			// Set user details for response
 			$obj->id       = $userId;
-			$obj->name     = JFactory::getUser($userId)->name;
-			$obj->username = JFactory::getUser($userId)->username;
-			$obj->email    = JFactory::getUser($userId)->email;
+			$obj->name     = Factory::getUser($userId)->name;
+			$obj->username = Factory::getUser($userId)->username;
+			$obj->email    = Factory::getUser($userId)->email;
 
 			// Generate claim for jwt
 			$data = [
@@ -200,7 +206,7 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 		else
 		{
 			$obj->code = 403;
-			$obj->message = JText::_('PLG_API_USERS_BAD_REQUEST_MESSAGE');
+			$obj->message = Text::_('PLG_API_USERS_BAD_REQUEST_MESSAGE');
 		}
 
 		return ($obj);
