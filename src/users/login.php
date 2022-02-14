@@ -59,7 +59,19 @@ class UsersApiResourceLogin extends ApiResource
 		// Init variables
 		$obj      = new stdclass;
 		$app      = JFactory::getApplication();
-		$username = $app->input->get('username', 0, 'STRING');
+		$username = $app->input->get('username', '', 'STRING');
+		$password = $app->input->get('password', '', 'STRING');
+
+		// Authenticate User
+		jimport('joomla.user.authentication');
+
+		$authenticate = JAuthentication::getInstance();
+		$response = $authenticate->authenticate(array( 'username' => $username, 'password' => $password ));
+
+		if ($response->status != JAuthentication::STATUS_SUCCESS)
+		{
+			ApiError::raiseError("403", JText::_('JLIB_LOGIN_AUTHENTICATE'));
+		}
 
 		$user = JFactory::getUser();
 
