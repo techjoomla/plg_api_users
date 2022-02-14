@@ -73,15 +73,15 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 
 		if (preg_match('/email:(\S+)/', $userToImpersonate, $matches))
 		{
-			$id = $matches[1];
+			$userId = $matches[1];
 		}
 		elseif (preg_match('/username:(\S+)/', $userToImpersonate, $matches))
 		{
-			$id = $matches[1];
+			$userId = JUserHelper::getUserId($matches[1]);
 		}
 		elseif (is_numeric($userToImpersonate))
 		{
-			$id = $userToImpersonate;
+			$userId = $userToImpersonate;
 		}
 		else
 		{
@@ -89,8 +89,6 @@ class UsersApiResourceImpersonateLogin extends ApiResource
 
 			return false;
 		}
-
-		$userId = JUserHelper::getUserId($id);
 
 		if ($userId == null)
 		{
