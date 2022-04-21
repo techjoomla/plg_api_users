@@ -8,6 +8,7 @@
 
 // No direct access.
 defined('_JEXEC') or die();
+use Joomla\Registry\Registry;
 
 /**
  * User Api.
@@ -19,6 +20,8 @@ defined('_JEXEC') or die();
  */
 class UsersApiResourceUser extends ApiResource
 {
+	public $shouldSendMail = 1;
+
 	/**
 	 * Function to create and edit user record.
 	 *
@@ -42,6 +45,16 @@ class UsersApiResourceUser extends ApiResource
 			ApiError::raiseError(400, JText::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
 
 			return;
+		}
+
+		if (isset($formData['password']))
+		{
+			$formData['password_clear'] = $formData['password'];
+		}
+		
+		if (isset($formData['sendmail']))
+		{
+			$this->shouldSendMail = $formData['sendmail'];
 		}
 
 		// Get current logged in user.
@@ -243,6 +256,11 @@ class UsersApiResourceUser extends ApiResource
 
 		if ($isNew)
 		{
+			if ($this->shouldSendMail)
+			{
+				$mail_sent = $this->sendNewUserEmail($formData);
+			}
+			
 			$response->message = JText::_('PLG_API_USERS_ACCOUNT_CREATED_SUCCESSFULLY_MESSAGE');
 		}
 		else
@@ -357,5 +375,70 @@ class UsersApiResourceUser extends ApiResource
 		}
 
 		return $user;
+	}
+
+	/**
+	 * Send new user create mail
+	 *
+	 * @param   array  $user  this contains user data.
+	 *
+	 * @return object
+	 */
+	public function sendNewUserEmail($user)
+	{
+		$app = JFactory::getApplication();
+		$lang = JFactory::getLanguage();
+		$defaultLocale = $lang->getTag();
+
+		/**
+		 * Look for user language. Priority:
+		 * 	1. User frontend language
+		 * 	2. User backend language
+		 */
+		$userParams = new Registry($user['params']);
+		$userLocale = $userParams->get('language', $userParams->get('admin_language', $defaultLocale));
+
+		if ($userLocale !== $defaultLocale)
+		{
+			$lang->setLanguage($userLocale);
+		}
+
+		$lang->load('plg_api_users', JPATH_ADMINISTRATOR);
+
+		// Compute the mail subject.
+		$emailSubject = JText::sprintf(
+			'PLG_API_USERS_NEW_USER_EMAIL_SUBJECT',
+			$user['name'],
+			$app->get('sitename')
+		);
+
+		// Compute the mail body.
+		$emailBody = JText::sprintf(
+			'PLG_API_USERS_NEW_USER_EMAIL_BODY',
+			$user['name'],
+			$app->get('sitename'),
+			JUri::root(),
+			$user['username'],
+			$user['password_clear']
+		);
+
+		$res = JFactory::getMailer()->sendMail(
+			$app->get('mailfrom'),
+			$app->get('fromname'),
+			$user['email'],
+			$emailSubject,
+			$emailBody
+		);
+
+		if ($res === false)
+		{
+			$app->enqueueMessage(JText::_('JERROR_SENDING_EMAIL'), 'warning');
+		}
+
+		// Set application language back to default if we changed it
+		if ($userLocale !== $defaultLocale)
+		{
+			$lang->setLanguage($defaultLocale);
+		}
 	}
 }
