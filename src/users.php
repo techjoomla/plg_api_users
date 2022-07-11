@@ -7,8 +7,8 @@
 */
 
 defined('_JEXEC') or die( 'Restricted access' );
+use Joomla\CMS\Factory;
 
-jimport('joomla.plugin.plugin');
 
 class plgAPIUsers extends ApiPlugin
 {
@@ -19,7 +19,7 @@ class plgAPIUsers extends ApiPlugin
 		ApiResource::addIncludePath(dirname(__FILE__).'/users');
 		
 		/*load language file for plugin frontend*/ 
-		$lang = JFactory::getLanguage(); 
+		$lang = Factory::getLanguage(); 
 		$lang->load('plg_api_users', JPATH_ADMINISTRATOR,'',true);
 		
 		// Set the login resource to be public
