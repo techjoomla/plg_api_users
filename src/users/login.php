@@ -22,10 +22,10 @@ use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\User\UserHelper;
 
 require_once JPATH_SITE . '/components/com_api/vendors/php-jwt/src/JWT.php';
-
 use Firebase\JWT\JWT;
 
 BaseDatabaseModel::addIncludePath(JPATH_SITE . 'components/com_api/models');
+
 require_once JPATH_SITE . '/components/com_api/libraries/authentication/user.php';
 require_once JPATH_SITE . '/components/com_api/libraries/authentication/login.php';
 require_once JPATH_ADMINISTRATOR . '/components/com_api/models/key.php';
@@ -67,33 +67,43 @@ class UsersApiResourceLogin extends ApiResource
 	public function keygen()
 	{
 		// Init variable
-		$obj    = new stdclass;
-		$umodel = new User;
-		$user   = $umodel->getInstance();
-
+		$obj      = new stdclass;
 		$app      = Factory::getApplication();
 		$username = $app->input->get('username', 0, 'STRING');
 
 		$user = Factory::getUser();
 		$id   = UserHelper::getUserId($username);
 
-		if ($id == null)
+		if ($username)
 		{
-			$model = FD::model('Users');
-			$id    = $model->getUserId('email', $username);
+			$umodel   = new JUser;
+			$user     = $umodel->getInstance();
+
+			$userId   = JUserHelper::getUserId($username);
+
+			if ($userId == null)
+			{
+				$keysModel = FD::model('Users');
+				$userId    = $keysModel->getUserId('email', $username);
+			}
+		}
+		else
+		{
+			$userId = $user->id;
 		}
 
-		$kmodel = new ApiModelKey;
-		$model  = new ApiModelKeys;
-		$key    = null;
+		// Init vars
+		$keyModel  = new ApiModelKey;
+		$keysModel = new ApiModelKeys;
+		$key       = null;
 
 		// Get login user hash
-		// $kmodel->setState('user_id', $user->id);
+		// $keyModel->setState('user_id', $user->id);
 
-		// $kmodel->setState('user_id', $id);
-		// $log_hash = $kmodel->getList();
-		$model->setState('user_id', $id);
-		$log_hash = $model->getItems();
+		// $keyModel->setState('user_id', $id);
+		// $log_hash = $keyModel->getList();
+		$keysModel->setState('user_id', $userId);
+		$log_hash = $keysModel->getItems();
 
 		$log_hash = (!empty($log_hash)) ? $log_hash[count($log_hash) - count($log_hash)] : $log_hash;
 
@@ -105,7 +115,7 @@ class UsersApiResourceLogin extends ApiResource
 		{
 			// Create new key for user
 			$data = array (
-				'userid' => $user->id,
+				'userid' => $userId,
 				'domain' => '' ,
 				'state'  => 1,
 				'id'     => '',
@@ -116,7 +126,7 @@ class UsersApiResourceLogin extends ApiResource
 				Session::getFormToken() => 1
 			);
 
-			$result = $kmodel->save($data);
+			$result = $keyModel->save($data);
 
 			// $key  = $result->hash;
 
@@ -129,6 +139,7 @@ class UsersApiResourceLogin extends ApiResource
 			Table::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
 			$table = Table::getInstance('Key', 'ApiTable');
 			$table->load(array('userid' => $user->id));
+
 			$key = $table->hash;
 
 			// Add new key in easysocial table
@@ -149,12 +160,18 @@ class UsersApiResourceLogin extends ApiResource
 			$obj->token = $key;
 
 			// $obj->id = $user->id;
+			// $obj->id = $id;
 
-			$obj->id = $id;
+			// Set user details for response
+			$obj->id       = $userId;
+			$obj->name     = JFactory::getUser($userId)->name;
+			$obj->username = JFactory::getUser($userId)->username;
+			$obj->email    = JFactory::getUser($userId)->email;
 
 			// Generate claim for jwt
 			$data = [
-				"id" => trim($id),
+				"id" => trim($userId),
+
 				/*"iat" => '',
 				"exp" => '',
 				"aud" => '',
@@ -196,9 +213,10 @@ class UsersApiResourceLogin extends ApiResource
 	{
 		require_once JPATH_ADMINISTRATOR . '/components/com_easysocial/includes/foundry.php';
 
-		$model = FD::model('Users');
-		$id    = $model->getUserId('username', $user->username);
-		$user  = FD::user($id);
+		$keysModel = FD::model('Users');
+		$id        = $keysModel->getUserId('username', $user->username);
+		$user      = FD::user($id);
+
 		$user->alias = $user->username;
 		$user->auth  = $key;
 		$user->store();
