@@ -7,8 +7,8 @@
 */
 
 defined('_JEXEC') or die( 'Restricted access' );
-use Joomla\CMS\Factory;
 
+use Joomla\CMS\Factory;
 
 class plgAPIUsers extends ApiPlugin
 {

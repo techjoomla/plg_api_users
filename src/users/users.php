@@ -23,7 +23,15 @@ $language = Factory::getLanguage();
 $language->load('com_users');
 $language->load('com_users', JPATH_SITE, 'en-GB', true);
 $language->load('com_users', JPATH_ADMINISTRATOR, 'en-GB', true);
-require_once JPATH_ROOT . '/administrator/components/com_users/models/users.php';
+
+if (JVERSION < '4.0.0')
+{
+	require_once JPATH_ROOT . '/administrator/components/com_users/models/users.php';
+}
+else
+{
+	require_once JPATH_ROOT . '/administrator/components/com_users/src/Model/UsersModel.php';
+}
 
 /**
  * User Api.
