@@ -11,11 +11,21 @@
 // No direct access.
 defined('_JEXEC') or die('Restricted access');
 
+use Joomla\CMS\MVC\Model\BaseDatabaseModel;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\User\User;
+use Joomla\CMS\Factory;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\Table\Table;
+use Joomla\CMS\Filesystem\File;
+use Joomla\CMS\Component\ComponentHelper;
+use Joomla\CMS\User\UserHelper;
+
 require_once JPATH_SITE . '/components/com_api/vendors/php-jwt/src/JWT.php';
 use Firebase\JWT\JWT;
 
+BaseDatabaseModel::addIncludePath(JPATH_SITE . 'components/com_api/models');
 
-JModelLegacy::addIncludePath(JPATH_SITE . 'components/com_api/models');
 require_once JPATH_SITE . '/components/com_api/libraries/authentication/user.php';
 require_once JPATH_SITE . '/components/com_api/libraries/authentication/login.php';
 require_once JPATH_ADMINISTRATOR . '/components/com_api/models/key.php';
@@ -36,7 +46,7 @@ class UsersApiResourceLogin extends ApiResource
 	 */
 	public function get()
 	{
-		$this->plugin->setResponse(JText::_('PLG_API_USERS_GET_METHOD_NOT_ALLOWED_MESSAGE'));
+		$this->plugin->setResponse(Text::_('PLG_API_USERS_GET_METHOD_NOT_ALLOWED_MESSAGE'));
 	}
 
 	/**
@@ -56,12 +66,13 @@ class UsersApiResourceLogin extends ApiResource
 	 */
 	public function keygen()
 	{
-		// Init variables
+		// Init variable
 		$obj      = new stdclass;
-		$app      = JFactory::getApplication();
+		$app      = Factory::getApplication();
 		$username = $app->input->get('username', 0, 'STRING');
 
-		$user = JFactory::getUser();
+		$user = Factory::getUser();
+		$id   = UserHelper::getUserId($username);
 
 		if ($username)
 		{
@@ -112,7 +123,7 @@ class UsersApiResourceLogin extends ApiResource
 				'c'      => 'key',
 				'ret'    => 'index.php?option=com_api&view=keys',
 				'option' => 'com_api',
-				JSession::getFormToken() => 1
+				Session::getFormToken() => 1
 			);
 
 			$result = $keyModel->save($data);
@@ -125,15 +136,16 @@ class UsersApiResourceLogin extends ApiResource
 			}
 
 			// Load api key table
-			JTable::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
-			$table = JTable::getInstance('Key', 'ApiTable');
-			$table->load(array('userid' => $userId));
+			Table::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
+			$table = Table::getInstance('Key', 'ApiTable');
+			$table->load(array('userid' => $user->id));
+
 			$key = $table->hash;
 
 			// Add new key in easysocial table
 			$easyblog = JPATH_ROOT . '/administrator/components/com_easyblog/easyblog.php';
 
-			if (JFile::exists($easyblog) && JComponentHelper::isEnabled('com_easysocial', true))
+			if (File::exists($easyblog) && ComponentHelper::isEnabled('com_easysocial', true))
 			{
 				$this->updateEauth($user, $key);
 			}
@@ -143,6 +155,9 @@ class UsersApiResourceLogin extends ApiResource
 		{
 			$obj->auth = $key;
 			$obj->code = '200';
+
+			// For backward compatability - TODO
+			$obj->token = $key;
 
 			// $obj->id = $user->id;
 			// $obj->id = $id;
@@ -178,7 +193,7 @@ class UsersApiResourceLogin extends ApiResource
 		else
 		{
 			$obj->code = 403;
-			$obj->message = JText::_('PLG_API_USERS_BAD_REQUEST_MESSAGE');
+			$obj->message = Text::_('PLG_API_USERS_BAD_REQUEST_MESSAGE');
 		}
 
 		return ($obj);

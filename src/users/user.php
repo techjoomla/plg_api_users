@@ -11,6 +11,13 @@
 // No direct access.
 defined('_JEXEC') or die('Restricted access');
 
+use Joomla\CMS\Factory;
+use Joomla\CMS\Component\ComponentHelper;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\User\User;
+use Joomla\CMS\Access\Access;
+use Joomla\CMS\User\UserHelper;
+
 /**
  * User Api.
  * Creates a new user, updates an existing user and gets data of an user
@@ -30,10 +37,10 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	public function post()
 	{
-		$app = JFactory::getApplication();
+		$app = Factory::getApplication();
 		$userIdentifier = $app->input->get('id', 0, 'String');
 		$formData = $app->input->getArray();
-		$params = JComponentHelper::getParams("com_users");
+		$params = ComponentHelper::getParams("com_users");
 		$response = new stdClass;
 
 		$xidentifier = $app->input->server->get('HTTP_X_IDENTIFIER');
@@ -41,20 +48,20 @@ class UsersApiResourceUser extends ApiResource
 
 		if ($formData['username'] == '' || $formData['name'] == '' || $formData['email'] == '')
 		{
-			ApiError::raiseError(400, JText::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
+			ApiError::raiseError(400, Text::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
 
 			return;
 		}
 
 		// Get current logged in user.
-		$my = JFactory::getUser();
+		$my = Factory::getUser();
 
 		// Check if $userIdentifier is not set
 		if (empty($userIdentifier))
 		{
 			if ($formData['password'] == '')
 			{
-				ApiError::raiseError(400, JText::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
+				ApiError::raiseError(400, Text::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
 
 				return;
 			}
@@ -66,7 +73,7 @@ class UsersApiResourceUser extends ApiResource
 			}
 
 			// Get a blank user object
-			$user = new JUser;
+			$user = new User;
 
 			// Create new user.
 			$response = $this->storeUser($user, $formData, 1);
@@ -107,7 +114,7 @@ class UsersApiResourceUser extends ApiResource
 				}
 				else
 				{
-					ApiError::raiseError(400, JText::_('JERROR_ALERTNOAUTHOR'));
+					ApiError::raiseError(400, Text::_('JERROR_ALERTNOAUTHOR'));
 
 					return;
 				}
@@ -116,11 +123,11 @@ class UsersApiResourceUser extends ApiResource
 			{
 				if ($fidentifier)
 				{
-					$user = new JUser;
+					$user = new User;
 
 					if ($formData['password'] == '')
 					{
-						ApiError::raiseError(400, JText::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
+						ApiError::raiseError(400, Text::_('PLG_API_USERS_REQUIRED_DATA_EMPTY_MESSAGE'));
 
 						return;
 					}
@@ -139,7 +146,7 @@ class UsersApiResourceUser extends ApiResource
 				}
 				else
 				{
-					ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_ABSENT_MESSAGE'));
+					ApiError::raiseError(400, Text::_('PLG_API_USERS_USER_ABSENT_MESSAGE'));
 
 					return;
 				}
@@ -156,7 +163,7 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	public function get()
 	{
-		$input = JFactory::getApplication()->input;
+		$input = Factory::getApplication()->input;
 		$id = $input->get('id', 0, 'int');
 		$xidentifier	= $input->server->get('HTTP_X_IDENTIFIER', '', 'String');
 
@@ -171,7 +178,7 @@ class UsersApiResourceUser extends ApiResource
 
 			if (! $user->id)
 			{
-				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
+				ApiError::raiseError(400, Text::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
 
 				return;
 			}
@@ -180,11 +187,11 @@ class UsersApiResourceUser extends ApiResource
 		}
 		else
 		{
-			$user = JFactory::getUser();
+			$user = Factory::getUser();
 
 			if ($user->guest)
 			{
-				ApiError::raiseError(400, JText::_('JERROR_ALERTNOAUTHOR'));
+				ApiError::raiseError(400, Text::_('JERROR_ALERTNOAUTHOR'));
 			}
 
 			$this->plugin->setResponse($user);
@@ -202,7 +209,7 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	private function getUserId($email)
 	{
-		$db = JFactory::getDbo();
+		$db = Factory::getDbo();
 		$query = $db->getQuery(true)
 			->select($db->quoteName('id'))
 			->from($db->quoteName('#__users'))
@@ -245,11 +252,11 @@ class UsersApiResourceUser extends ApiResource
 
 		if ($isNew)
 		{
-			$response->message = JText::_('PLG_API_USERS_ACCOUNT_CREATED_SUCCESSFULLY_MESSAGE');
+			$response->message = Text::_('PLG_API_USERS_ACCOUNT_CREATED_SUCCESSFULLY_MESSAGE');
 		}
 		else
 		{
-			$response->message = JText::_('PLG_API_USERS_ACCOUNT_UPDATED_SUCCESSFULLY_MESSAGE');
+			$response->message = Text::_('PLG_API_USERS_ACCOUNT_UPDATED_SUCCESSFULLY_MESSAGE');
 		}
 
 		return $response;
@@ -264,11 +271,11 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	public function delete()
 	{
-		$app = JFactory::getApplication();
+		$app = Factory::getApplication();
 		$userIdentifier = $app->input->get('id', 0, 'STRING');
 		$xidentifier = $app->input->server->get('HTTP_X_IDENTIFIER', '', 'String');
 
-		$loggedUser = JFactory::getUser();
+		$loggedUser = Factory::getUser();
 
 		// Check if I am a Super Admin
 		$iAmSuperAdmin = $loggedUser->authorise('core.admin');
@@ -277,14 +284,14 @@ class UsersApiResourceUser extends ApiResource
 
 		if (!$userToDelete->id)
 		{
-			ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
+			ApiError::raiseError(400, Text::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
 
 			return;
 		}
 
 		if ($loggedUser->id == $userToDelete->id)
 		{
-			ApiError::raiseError(400, JText::_('COM_USERS_USERS_ERROR_CANNOT_DELETE_SELF'));
+			ApiError::raiseError(400, Text::_('COM_USERS_USERS_ERROR_CANNOT_DELETE_SELF'));
 
 			return;
 		}
@@ -293,7 +300,7 @@ class UsersApiResourceUser extends ApiResource
 		$allow = $loggedUser->authorise('core.delete', 'com_users');
 
 		// Don't allow non-super-admin to delete a super admin
-		$allow = (!$iAmSuperAdmin && JAccess::check($userToDelete->id, 'core.admin')) ? false : $allow;
+		$allow = (!$iAmSuperAdmin && Access::check($userToDelete->id, 'core.admin')) ? false : $allow;
 
 		if ($allow)
 		{
@@ -306,13 +313,13 @@ class UsersApiResourceUser extends ApiResource
 		}
 		else
 		{
-			ApiError::raiseError(403, JText::_('JERROR_CORE_DELETE_NOT_PERMITTED'));
+			ApiError::raiseError(403, Text::_('JERROR_CORE_DELETE_NOT_PERMITTED'));
 
 			return;
 		}
 
 		$response = new stdClass;
-		$response->message = JText::_('PLG_API_USERS_USER_DELETE_MESSAGE');
+		$response->message = Text::_('PLG_API_USERS_USER_DELETE_MESSAGE');
 		$this->plugin->setResponse($response);
 
 		return;
@@ -336,11 +343,11 @@ class UsersApiResourceUser extends ApiResource
 		switch ($xidentifier)
 		{
 			case 'username':
-				$userId = JUserHelper::getUserId($userIdentifier);
+				$userId = UserHelper::getUserId($userIdentifier);
 
 				if (!empty($userId))
 				{
-					$user = JFactory::getUser($userId);
+					$user = Factory::getUser($userId);
 				}
 				break;
 
@@ -349,12 +356,12 @@ class UsersApiResourceUser extends ApiResource
 
 				if (!empty($userId))
 				{
-					$user = JFactory::getUser($userId);
+					$user = Factory::getUser($userId);
 				}
 			break;
 
 			default:
-				$user = JFactory::getUser($userIdentifier);
+				$user = Factory::getUser($userIdentifier);
 				break;
 		}
 
