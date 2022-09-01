@@ -11,6 +11,9 @@
 // No direct access.
 defined('_JEXEC') or die('Restricted access');
 
+use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
+
 /**
  * User Api.
  * Creates a new user, updates an existing user and gets data of an user
@@ -156,9 +159,17 @@ class UsersApiResourceUser extends ApiResource
 	 */
 	public function get()
 	{
-		$input = JFactory::getApplication()->input;
-		$id = $input->get('id', 0, 'int');
-		$xidentifier	= $input->server->get('HTTP_X_IDENTIFIER', '', 'String');
+		$input       = Factory::getApplication()->input;
+		$id          = $input->get('id', 0, 'int');
+		$xidentifier = $input->server->get('HTTP_X_IDENTIFIER', '', 'String');
+		$user        = Factory::getUser();
+
+		if (!$user->authorise('core.admin') && $id != $user->id)
+		{
+			ApiError::raiseError(400, Text::_('JERROR_ALERTNOAUTHOR'));
+
+			return;
+		}
 
 		/*
 		 * If we have an id try to fetch the user
@@ -171,7 +182,7 @@ class UsersApiResourceUser extends ApiResource
 
 			if (! $user->id)
 			{
-				ApiError::raiseError(400, JText::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
+				ApiError::raiseError(400, Text::_('PLG_API_USERS_USER_NOT_FOUND_MESSAGE'));
 
 				return;
 			}
@@ -180,11 +191,9 @@ class UsersApiResourceUser extends ApiResource
 		}
 		else
 		{
-			$user = JFactory::getUser();
-
 			if ($user->guest)
 			{
-				ApiError::raiseError(400, JText::_('JERROR_ALERTNOAUTHOR'));
+				ApiError::raiseError(400, Text::_('JERROR_ALERTNOAUTHOR'));
 			}
 
 			$this->plugin->setResponse($user);
