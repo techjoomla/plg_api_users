@@ -76,10 +76,10 @@ class UsersApiResourceLogin extends ApiResource
 
 		if ($username)
 		{
-			$umodel   = new JUser;
+			$umodel   = new User;
 			$user     = $umodel->getInstance();
 
-			$userId   = JUserHelper::getUserId($username);
+			$userId   = UserHelper::getUserId($username);
 
 			if ($userId == null)
 			{
@@ -164,9 +164,9 @@ class UsersApiResourceLogin extends ApiResource
 
 			// Set user details for response
 			$obj->id       = $userId;
-			$obj->name     = JFactory::getUser($userId)->name;
-			$obj->username = JFactory::getUser($userId)->username;
-			$obj->email    = JFactory::getUser($userId)->email;
+			$obj->name     = Factory::getUser($userId)->name;
+			$obj->username = Factory::getUser($userId)->username;
+			$obj->email    = Factory::getUser($userId)->email;
 
 			// Generate claim for jwt
 			$data = [
