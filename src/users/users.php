@@ -241,7 +241,6 @@ class UsersApiResourceUsers extends ApiResource
 
 		}
 
-		$authorize = Factory::getACL();
 		$user = clone Factory::getUser();
 		$user->set('username', $data['username']);
 		$user->set('password', $data['password']);
@@ -259,18 +258,11 @@ class UsersApiResourceUsers extends ApiResource
 		$user->set('id', '');
 		$user->set('usertype', 'Registered');
 
-		if (JVERSION >= '1.6.0')
-		{
-			$userConfig       = ComponentHelper::getParams('com_users');
+		$userConfig       = ComponentHelper::getParams('com_users');
 
-			// Default to Registered.
-			$defaultUserGroup = $userConfig->get('new_usertype', 2);
-			$user->set('groups', array($defaultUserGroup));
-		}
-		else
-		{
-			$user->set('gid', $authorize->get_group_id('', 'Registered', 'ARO'));
-		}
+		// Default to Registered.
+		$defaultUserGroup = $userConfig->get('new_usertype', 2);
+		$user->set('groups', array($defaultUserGroup));
 
 		$date = Factory::getDate();
 		$user->set('registerDate', $date->toSql());
