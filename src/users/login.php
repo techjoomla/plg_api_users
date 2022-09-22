@@ -72,7 +72,7 @@ class UsersApiResourceLogin extends ApiResource
 		$username = $app->input->get('username', 0, 'STRING');
 
 		$user = Factory::getUser();
-		$id   = UserHelper::getUserId($username);
+		$userId   = UserHelper::getUserId($username);
 
 		if ($username)
 		{
@@ -138,7 +138,7 @@ class UsersApiResourceLogin extends ApiResource
 			// Load api key table
 			Table::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
 			$table = Table::getInstance('Key', 'ApiTable');
-			$table->load(array('userid' => $user->id));
+			$table->load(array('userid' => $userId));
 
 			$key = $table->hash;
 
@@ -147,6 +147,7 @@ class UsersApiResourceLogin extends ApiResource
 
 			if (File::exists($easyblog) && ComponentHelper::isEnabled('com_easysocial', true))
 			{
+				$user = FD::user($userId);
 				$this->updateEauth($user, $key);
 			}
 		}
