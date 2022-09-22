@@ -8,15 +8,15 @@
 
 defined('_JEXEC') or die( 'Restricted access' );
 
-jimport('joomla.plugin.plugin');
-jimport('joomla.html.html');
-jimport('joomla.application.component.controller');
-jimport('joomla.application.component.model');
-jimport('joomla.user.helper');
-jimport('joomla.user.user');
-jimport('joomla.application.component.helper');
+use Joomla\CMS\MVC\Model\BaseDatabaseModel;
+use Joomla\CMS\Filesystem\File;
+use Joomla\CMS\Factory;
+use Joomla\CMS\Language\LanguageHelper;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\Registry\Registry;
 
-JModelLegacy::addIncludePath(JPATH_SITE.'components/com_api/models');
+BaseDatabaseModel::addIncludePath(JPATH_SITE.'components/com_api/models');
 require_once JPATH_SITE.'/components/com_api/libraries/authentication/user.php';
 require_once JPATH_SITE.'/components/com_api/libraries/authentication/login.php';
 
@@ -30,14 +30,14 @@ class UsersApiResourceConfig extends ApiResource
 		$easyblog = JPATH_ADMINISTRATOR .'/components/com_easyblog/easyblog.php';
 		$easysocial = JPATH_ADMINISTRATOR .'/components/com_easysocial/easysocial.php';
 		//eb version
-		if( JFile::exists( $easyblog ) )
+		if( File::exists( $easyblog ) )
 		{
 			$obj->easyblog = $this->getCompParams('com_easyblog','easyblog');
 		}
 		//es version
-		if( JFile::exists( $easysocial ) )
+		if( File::exists( $easysocial ) )
 		{
-			/*$xml = JFactory::getXML(JPATH_ADMINISTRATOR .'/components/com_easysocial/easyblog.xml');
+			/*$xml = simplexml_load_file(JPATH_ADMINISTRATOR .'/components/com_easysocial/easyblog.xml');
 			$obj->easysocial_version = (string)$xml->version;*/
 			$obj->easysocial = $this->getCompParams( 'com_easysocial','easysocial' );
 		}
@@ -45,7 +45,7 @@ class UsersApiResourceConfig extends ApiResource
 		$obj->global_config = $this->getJoomlaConfig();
 		$obj->plugin_config = $this->getpluginConfig();
 
-		$installedLanguages = JLanguageHelper::getLanguages();
+		$installedLanguages = LanguageHelper::getLanguages();
 		$languages = array();
 
 		foreach($installedLanguages as $lang){
@@ -58,24 +58,23 @@ class UsersApiResourceConfig extends ApiResource
 
 	public function post()
 	{
-	   $this->plugin->setResponse( JText::_( 'PLG_API_USERS_UNSUPPORTED_METHOD_POST' ));
+	   $this->plugin->setResponse( Text::_( 'PLG_API_USERS_UNSUPPORTED_METHOD_POST' ));
 	}
 
 	
 	//get component params
 	public function getCompParams($cname=null,$name=null)
 	{
-		jimport('joomla.application.component.helper');
-		$app = JFactory::getApplication();
+		$app = Factory::getApplication();
 		$cdata = array();
 	
-		$xml = JFactory::getXML(JPATH_ADMINISTRATOR .'/components/'.$cname.'/'.$name.'.xml');
+		$xml = simplexml_load_file(JPATH_ADMINISTRATOR .'/components/'.$cname.'/'.$name.'.xml');
 		$cdata['version'] = (string)$xml->version;
-		$jconfig = JFactory::getConfig();
+		$jconfig = Factory::getConfig();
 		
 		if( $cname == 'com_easyblog' )
 		{
-		       /*$xml = JFactory::getXML(JPATH_ADMINISTRATOR .'/components/com_easyblog/easyblog.xml');
+		       /*$xml = simplexml_load_file(JPATH_ADMINISTRATOR .'/components/com_easyblog/easyblog.xml');
                        $version = (string)$xml->version;*/  
 
                        if($cdata['version']<5)
@@ -132,11 +131,11 @@ class UsersApiResourceConfig extends ApiResource
 	public function getpluginConfig()
 	{
 		$data = array();
-		$plugin = JPluginHelper::getPlugin('api', 'users');
-		$pluginParams = new JRegistry($plugin->params);
+		$plugin = PluginHelper::getPlugin('api', 'users');
+		$pluginParams = new Registry($plugin->params);
 		//code for future use
-		/*$plugin_es = JPluginHelper::getPlugin('api', 'easysocial');
-		$pluginParams_es = new JRegistry($plugin_es->params);*/
+		/*$plugin_es = PluginHelper::getPlugin('api', 'easysocial');
+		$pluginParams_es = new Registry($plugin_es->params);*/
 		
 		$data['fb_login'] = $pluginParams->get('fb_login');
 		$data['fb_app_id'] = $pluginParams->get('fb_app_id');
@@ -149,7 +148,7 @@ class UsersApiResourceConfig extends ApiResource
 	//get joomla config changes
 	public function getJoomlaConfig()
 	{
-		$jconfig = JFactory::getConfig();
+		$jconfig = Factory::getConfig();
 		$jarray = array();
 		$jarray['global_list_limit'] = $jconfig->get('list_limit');
 		$jarray['offset'] = $jconfig->get('offset');

@@ -4,26 +4,28 @@
  * @subpackage  plg_api_users
  *
  * @author      Techjoomla <extensions@techjoomla.com>
- * @copyright   Copyright (C) 2009 - 2019 Techjoomla, Tekdi Technologies Pvt. Ltd. All rights reserved.
+ * @copyright   Copyright (C) 2009 - 2022 Techjoomla, Tekdi Technologies Pvt. Ltd. All rights reserved.
  * @license     GNU GPLv2 <http://www.gnu.org/licenses/old-licenses/gpl-2.0.html>
  */
 
 // No direct access.
 defined('_JEXEC') or die('Restricted access');
 
-require_once JPATH_SITE . '/components/com_api/vendors/php-jwt/src/JWT.php';
+use Joomla\CMS\MVC\Model\BaseDatabaseModel;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\User\User;
+use Joomla\CMS\Factory;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\Table\Table;
+use Joomla\CMS\Filesystem\File;
+use Joomla\CMS\Component\ComponentHelper;
+use Joomla\CMS\User\UserHelper;
 
+require_once JPATH_SITE . '/components/com_api/vendors/php-jwt/src/JWT.php';
 use Firebase\JWT\JWT;
 
-jimport('joomla.plugin.plugin');
-jimport('joomla.html.html');
-jimport('joomla.application.component.controller');
-jimport('joomla.application.component.model');
-jimport('joomla.user.helper');
-jimport('joomla.user.user');
-jimport('joomla.application.component.helper');
+BaseDatabaseModel::addIncludePath(JPATH_SITE . 'components/com_api/models');
 
-JModelLegacy::addIncludePath(JPATH_SITE . 'components/com_api/models');
 require_once JPATH_SITE . '/components/com_api/libraries/authentication/user.php';
 require_once JPATH_SITE . '/components/com_api/libraries/authentication/login.php';
 require_once JPATH_ADMINISTRATOR . '/components/com_api/models/key.php';
@@ -44,7 +46,7 @@ class UsersApiResourceLogin extends ApiResource
 	 */
 	public function get()
 	{
-		$this->plugin->setResponse(JText::_('PLG_API_USERS_GET_METHOD_NOT_ALLOWED_MESSAGE'));
+		$this->plugin->setResponse(Text::_('PLG_API_USERS_GET_METHOD_NOT_ALLOWED_MESSAGE'));
 	}
 
 	/**
@@ -65,33 +67,43 @@ class UsersApiResourceLogin extends ApiResource
 	public function keygen()
 	{
 		// Init variable
-		$obj    = new stdclass;
-		$umodel = new JUser;
-		$user   = $umodel->getInstance();
-
-		$app      = JFactory::getApplication();
+		$obj      = new stdclass;
+		$app      = Factory::getApplication();
 		$username = $app->input->get('username', 0, 'STRING');
 
-		$user = JFactory::getUser();
-		$id   = JUserHelper::getUserId($username);
+		$user = Factory::getUser();
+		$id   = UserHelper::getUserId($username);
 
-		if ($id == null)
+		if ($username)
 		{
-			$model = FD::model('Users');
-			$id    = $model->getUserId('email', $username);
+			$umodel   = new User;
+			$user     = $umodel->getInstance();
+
+			$userId   = UserHelper::getUserId($username);
+
+			if ($userId == null)
+			{
+				$keysModel = FD::model('Users');
+				$userId    = $keysModel->getUserId('email', $username);
+			}
+		}
+		else
+		{
+			$userId = $user->id;
 		}
 
-		$kmodel = new ApiModelKey;
-		$model  = new ApiModelKeys;
-		$key    = null;
+		// Init vars
+		$keyModel  = new ApiModelKey;
+		$keysModel = new ApiModelKeys;
+		$key       = null;
 
 		// Get login user hash
-		// $kmodel->setState('user_id', $user->id);
+		// $keyModel->setState('user_id', $user->id);
 
-		// $kmodel->setState('user_id', $id);
-		// $log_hash = $kmodel->getList();
-		$model->setState('user_id', $id);
-		$log_hash = $model->getItems();
+		// $keyModel->setState('user_id', $id);
+		// $log_hash = $keyModel->getList();
+		$keysModel->setState('user_id', $userId);
+		$log_hash = $keysModel->getItems();
 
 		$log_hash = (!empty($log_hash)) ? $log_hash[count($log_hash) - count($log_hash)] : $log_hash;
 
@@ -103,7 +115,7 @@ class UsersApiResourceLogin extends ApiResource
 		{
 			// Create new key for user
 			$data = array (
-				'userid' => $user->id,
+				'userid' => $userId,
 				'domain' => '' ,
 				'state'  => 1,
 				'id'     => '',
@@ -111,10 +123,10 @@ class UsersApiResourceLogin extends ApiResource
 				'c'      => 'key',
 				'ret'    => 'index.php?option=com_api&view=keys',
 				'option' => 'com_api',
-				JSession::getFormToken() => 1
+				Session::getFormToken() => 1
 			);
 
-			$result = $kmodel->save($data);
+			$result = $keyModel->save($data);
 
 			// $key  = $result->hash;
 
@@ -124,15 +136,16 @@ class UsersApiResourceLogin extends ApiResource
 			}
 
 			// Load api key table
-			JTable::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
-			$table = JTable::getInstance('Key', 'ApiTable');
+			Table::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
+			$table = Table::getInstance('Key', 'ApiTable');
 			$table->load(array('userid' => $user->id));
+
 			$key = $table->hash;
 
 			// Add new key in easysocial table
 			$easyblog = JPATH_ROOT . '/administrator/components/com_easyblog/easyblog.php';
 
-			if (JFile::exists($easyblog) && JComponentHelper::isEnabled('com_easysocial', true))
+			if (File::exists($easyblog) && ComponentHelper::isEnabled('com_easysocial', true))
 			{
 				$this->updateEauth($user, $key);
 			}
@@ -143,13 +156,22 @@ class UsersApiResourceLogin extends ApiResource
 			$obj->auth = $key;
 			$obj->code = '200';
 
-			// $obj->id = $user->id;
+			// For backward compatability - TODO
+			$obj->token = $key;
 
-			$obj->id = $id;
+			// $obj->id = $user->id;
+			// $obj->id = $id;
+
+			// Set user details for response
+			$obj->id       = $userId;
+			$obj->name     = Factory::getUser($userId)->name;
+			$obj->username = Factory::getUser($userId)->username;
+			$obj->email    = Factory::getUser($userId)->email;
 
 			// Generate claim for jwt
 			$data = [
-				"id" => trim($id),
+				"id" => trim($userId),
+
 				/*"iat" => '',
 				"exp" => '',
 				"aud" => '',
@@ -171,7 +193,7 @@ class UsersApiResourceLogin extends ApiResource
 		else
 		{
 			$obj->code = 403;
-			$obj->message = JText::_('PLG_API_USERS_BAD_REQUEST_MESSAGE');
+			$obj->message = Text::_('PLG_API_USERS_BAD_REQUEST_MESSAGE');
 		}
 
 		return ($obj);
@@ -191,9 +213,10 @@ class UsersApiResourceLogin extends ApiResource
 	{
 		require_once JPATH_ADMINISTRATOR . '/components/com_easysocial/includes/foundry.php';
 
-		$model = FD::model('Users');
-		$id    = $model->getUserId('username', $user->username);
-		$user  = FD::user($id);
+		$keysModel = FD::model('Users');
+		$id        = $keysModel->getUserId('username', $user->username);
+		$user      = FD::user($id);
+
 		$user->alias = $user->username;
 		$user->auth  = $key;
 		$user->store();
