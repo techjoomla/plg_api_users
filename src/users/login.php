@@ -4,7 +4,7 @@
  * @subpackage  plg_api_users
  *
  * @author      Techjoomla <extensions@techjoomla.com>
- * @copyright   Copyright (C) 2009 - 2019 Techjoomla, Tekdi Technologies Pvt. Ltd. All rights reserved.
+ * @copyright   Copyright (C) 2009 - 2022 Techjoomla, Tekdi Technologies Pvt. Ltd. All rights reserved.
  * @license     GNU GPLv2 <http://www.gnu.org/licenses/old-licenses/gpl-2.0.html>
  */
 
@@ -71,8 +71,8 @@ class UsersApiResourceLogin extends ApiResource
 		$app      = Factory::getApplication();
 		$username = $app->input->get('username', 0, 'STRING');
 
-		$user = Factory::getUser();
 		$id   = UserHelper::getUserId($username);
+		$user = Factory::getUser($id);
 
 		if ($username)
 		{
@@ -138,8 +138,7 @@ class UsersApiResourceLogin extends ApiResource
 			// Load api key table
 			Table::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
 			$table = Table::getInstance('Key', 'ApiTable');
-			$table->load(array('userid' => $user->id));
-
+			$table->load(array('userid' => $userId));
 			$key = $table->hash;
 
 			// Add new key in easysocial table
