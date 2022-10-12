@@ -71,8 +71,8 @@ class UsersApiResourceLogin extends ApiResource
 		$app      = Factory::getApplication();
 		$username = $app->input->get('username', 0, 'STRING');
 
-		$user = Factory::getUser();
 		$id   = UserHelper::getUserId($username);
+		$user = Factory::getUser($id);
 
 		if ($username)
 		{
@@ -138,8 +138,7 @@ class UsersApiResourceLogin extends ApiResource
 			// Load api key table
 			Table::addIncludePath(JPATH_ROOT . '/administrator/components/com_api/tables');
 			$table = Table::getInstance('Key', 'ApiTable');
-			$table->load(array('userid' => $user->id));
-
+			$table->load(array('userid' => $userId));
 			$key = $table->hash;
 
 			// Add new key in easysocial table
