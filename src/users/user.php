@@ -182,7 +182,7 @@ class UsersApiResourceUser extends ApiResource
 
 				return;
 			}
-
+			unset($user->password);
 			$this->plugin->setResponse($user);
 		}
 		else
@@ -193,9 +193,10 @@ class UsersApiResourceUser extends ApiResource
 			{
 				ApiError::raiseError(400, Text::_('JERROR_ALERTNOAUTHOR'));
 			}
-
+			unset($user->password);
 			$this->plugin->setResponse($user);
 		}
+		
 	}
 
 	/**
