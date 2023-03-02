@@ -19,6 +19,7 @@ use Joomla\CMS\Filesystem\File;
 use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\User\UserHelper;
+use Joomla\CMS\MVC\Model\BaseDatabaseModel;
 
 // Load com_users language file
 $language = Factory::getLanguage();
@@ -28,11 +29,11 @@ $language->load('com_users', JPATH_ADMINISTRATOR, 'en-GB', true);
 
 if (JVERSION < '4.0.0')
 {
-	require_once JPATH_ROOT . '/administrator/components/com_users/models/users.php';
+	BaseDatabaseModel::addIncludePath(JPATH_ADMINISTRATOR . '/components/com_users/models/');	
 }
 else
 {
-	require_once JPATH_ROOT . '/administrator/components/com_users/src/Model/UsersModel.php';
+	BaseDatabaseModel::addIncludePath(JPATH_ADMINISTRATOR . '/components/com_users//com_users/src/Model/');	
 }
 
 /**
@@ -352,14 +353,9 @@ class UsersApiResourceUsers extends ApiResource
 	{
 		$app = Factory::getApplication();
 		$input = $app->input;
-		$res = new stdClass();
-
-		if (JVERSION < '4.0.0'){
-			$model = new UsersModelUsers;
-		}else{
-			$model = $app->bootComponent('com_users')
-                     ->getMVCFactory()->createModel('Users', 'Administrator');
-		}
+		$res = new stdClass();				
+		
+		$model = BaseDatabaseModel::getInstance('Users', 'UsersModel');		
 
 		$app->setUserState("com_users.users.default.filter.search", $input->get('search'));
 		$app->setUserState("com_users.users.default.filter.active", '0');
