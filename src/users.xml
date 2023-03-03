@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<extension version="3.0.0" type="plugin" group="api" method="upgrade">
+<extension version="3.0.1" type="plugin" group="api" method="upgrade">
 	<name>PLG_API_USERS</name>
-	<version>3.0.0</version>
-	<creationDate>12th Oct 2022</creationDate>
+	<version>3.0.1</version>
+	<creationDate>28th Feb 2023</creationDate>
 	<author>Techjoomla</author>
 	<authorEmail>extensions@techjoomla.com</authorEmail>
 	<authorUrl>www.techjoomla.com</authorUrl>

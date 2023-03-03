@@ -19,6 +19,7 @@ use Joomla\CMS\Filesystem\File;
 use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\User\UserHelper;
+use Joomla\CMS\MVC\Model\BaseDatabaseModel;
 
 // Load com_users language file
 $language = Factory::getLanguage();
@@ -28,11 +29,11 @@ $language->load('com_users', JPATH_ADMINISTRATOR, 'en-GB', true);
 
 if (JVERSION < '4.0.0')
 {
-	require_once JPATH_ROOT . '/administrator/components/com_users/models/users.php';
+	BaseDatabaseModel::addIncludePath(JPATH_ADMINISTRATOR . '/components/com_users/models/');	
 }
 else
 {
-	require_once JPATH_ROOT . '/administrator/components/com_users/src/Model/UsersModel.php';
+	BaseDatabaseModel::addIncludePath(JPATH_ADMINISTRATOR . '/components/com_users//com_users/src/Model/');	
 }
 
 /**
@@ -185,7 +186,7 @@ class UsersApiResourceUsers extends ApiResource
 					$eobj->status     = true;
 					$eobj->id         = $data['user_id'];
 					$eobj->code       = '200';
-					$eobj->message    = Text::_('PLG_API_USERS_ACCOUNT_EDITED_SUCCESSFULLY_MESSAGE');
+					$eobj->message    = Text::_('PLG_API_USERS_ACCOUNT_UPDATED_SUCCESSFULLY_MESSAGE');
 					$this->plugin->setResponse($eobj);
 
 					return;
@@ -251,8 +252,7 @@ class UsersApiResourceUsers extends ApiResource
 
 		// Password encryption
 		$salt           = UserHelper::genRandomPassword(32);
-		$crypt          = UserHelper::getCryptedPassword($user->password, $salt);
-		$user->password = "$crypt:$salt";
+		$user->password = UserHelper::hashPassword($salt);			
 
 		// User group/type
 		$user->set('id', '');
@@ -351,13 +351,11 @@ class UsersApiResourceUsers extends ApiResource
 	 */
 	public function get()
 	{
-
-		$input = Factory::getApplication()->input;
-		$res = new stdClass();
-
-		$model = new UsersModelUsers;
-
-		$app = Factory::getApplication('administrator');
+		$app = Factory::getApplication();
+		$input = $app->input;
+		$res = new stdClass();				
+		
+		$model = BaseDatabaseModel::getInstance('Users', 'UsersModel');		
 
 		$app->setUserState("com_users.users.default.filter.search", $input->get('search'));
 		$app->setUserState("com_users.users.default.filter.active", '0');
@@ -590,14 +588,23 @@ class UsersApiResourceUsers extends ApiResource
 			if ($sendpassword)
 			{
 				$emailBody = Text::sprintf(
-					'Hello %s,\n\nThank you for registering at %s. Your account is created and activated.
-					\nYou can login to %s using the following username and password:\n\nUsername: %s\nPassword: %s',
+					'COM_USERS_EMAIL_ACCOUNT_DETAILS',
 					$base_dt['name'],
 					$data['sitename'],
 					$base_dt['app'],
 					$base_dt['username'],
 					$base_dt['password']
 				);
+			}else{
+				$emailBody = Text::sprintf(
+					'COM_USERS_EMAIL_REGISTERED_BODY_NOPW',
+					$base_dt['name'],
+					$data['sitename'],
+					$data['activate'],
+					$base_dt['app'],
+					$base_dt['username']
+					
+				); 
 			}
 
 		}
@@ -625,6 +632,16 @@ class UsersApiResourceUsers extends ApiResource
 					$base_dt['username'],
 					$base_dt['password']
 				);
+			}else{
+				$emailBody = Text::sprintf(
+					'COM_USERS_EMAIL_REGISTERED_WITH_ADMIN_ACTIVATION_BODY_NOPW',
+					$base_dt['name'],
+					$data['sitename'],
+					$data['activate'],
+					$base_dt['app'],
+					$base_dt['username']
+					
+				); 
 			}
 		}
 		// Send the registration email.
